@@ -1,10 +1,3 @@
-# =============================================================================
-# Docker Compose — Infrastructure Services
-# =============================================================================
-# Start:    docker compose -f infra/docker/docker-compose.yml up -d
-# Stop:     docker compose -f infra/docker/docker-compose.yml down
-# Reset:    docker compose -f infra/docker/docker-compose.yml down -v
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -37,6 +30,42 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: meal-platform-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://mealplan:mealplan_dev@postgres:5432/adaptive_meals?schema=public
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-sk_test_placeholder}
+      API_PORT: 4000
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    container_name: meal-platform-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_placeholder}
+      NEXT_PUBLIC_API_URL: http://api:4000
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
