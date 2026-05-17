@@ -91,7 +91,7 @@ Swagger UI is available at: `http://localhost:4000/api/docs`
 
 ## 📖 Documentation
 
-- [Architecture Overview](./docs/architecture.md)
-- [API Design](./docs/api-design.md)
+- [Architecture Overview](./architecture.md)
+- [API Design](./api-design.md)
 - [Blueprint](./adaptive_meal_platform_blueprint.docx.md)
 - [Technical Plan](./AGENT.md)
