@@ -1,0 +1,254 @@
+// =============================================================================
+// Prisma Schema — Adaptive Meal Planning Platform
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum CuisineType {
+  RWANDAN
+  EAST_AFRICAN
+  AFRICAN
+  INTERNATIONAL
+  FUSION
+}
+
+enum Complexity {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum BudgetLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum CookingSkill {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum FeedbackType {
+  LIKED
+  DISLIKED
+  TOO_EXPENSIVE
+  TOO_DIFFICULT
+  TOO_REPETITIVE
+  TOO_TIME_CONSUMING
+}
+
+enum VideoSource {
+  YOUTUBE
+  TIKTOK
+  ORIGINAL
+}
+
+enum AgeRange {
+  UNDER_18
+  AGE_18_25
+  AGE_26_35
+  AGE_36_45
+  AGE_46_55
+  OVER_55
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum LocalAvailability {
+  COMMON
+  SEASONAL
+  RARE
+  IMPORTED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id                  String         @id @default(cuid())
+  clerkId             String         @unique
+  email               String         @unique
+  fullName            String
+  ageRange            AgeRange?
+  gender              Gender?
+  householdSize       Int            @default(1)
+  budgetLevel         BudgetLevel    @default(MEDIUM)
+  activityLevel       ActivityLevel  @default(MODERATE)
+  cookingSkill        CookingSkill   @default(INTERMEDIATE)
+  dietaryPreferences  String[]       @default([])
+  allergies           String[]       @default([])
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  recommendations     Recommendation[]
+  feedback            Feedback[]
+  preferences         UserPreference[]
+  healthMetrics       HealthMetric[]
+
+  @@map("users")
+}
+
+model Meal {
+  id                String          @id @default(cuid())
+  title             String
+  description       String
+  preparationTime   Int             // minutes
+  estimatedCost     Float           // RWF
+  calories          Int
+  cuisineType       CuisineType     @default(RWANDAN)
+  complexity        Complexity      @default(MEDIUM)
+  tags              String[]        @default([])
+  imageUrl          String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  ingredients       MealIngredient[]
+  nutritionProfile  NutritionProfile?
+  videos            VideoReference[]
+  recommendations   Recommendation[]
+  feedback          Feedback[]
+
+  @@map("meals")
+}
+
+model Ingredient {
+  id                String            @id @default(cuid())
+  name              String            @unique
+  localAvailability LocalAvailability @default(COMMON)
+  averageCost       Float             // RWF
+
+  meals             MealIngredient[]
+
+  @@map("ingredients")
+}
+
+model MealIngredient {
+  id           String     @id @default(cuid())
+  mealId       String
+  ingredientId String
+  quantity     Float
+  unit         String
+
+  meal         Meal       @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([mealId, ingredientId])
+  @@map("meal_ingredients")
+}
+
+model NutritionProfile {
+  id       String  @id @default(cuid())
+  mealId   String  @unique
+  protein  Float   // grams
+  carbs    Float
+  fat      Float
+  fiber    Float
+  vitamins String? // JSON or text summary
+
+  meal     Meal    @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("nutrition_profiles")
+}
+
+model VideoReference {
+  id          String      @id @default(cuid())
+  mealId      String
+  url         String
+  source      VideoSource @default(YOUTUBE)
+  title       String
+  creatorName String?
+
+  meal        Meal        @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("video_references")
+}
+
+model Recommendation {
+  id                  String   @id @default(cuid())
+  userId              String
+  mealId              String
+  recommendationScore Float
+  mealType            MealType
+  createdAt           DateTime @default(now())
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meal                Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("recommendations")
+}
+
+model Feedback {
+  id           String       @id @default(cuid())
+  userId       String
+  mealId       String
+  rating       Int          // 1-5
+  feedbackType FeedbackType
+  comment      String?
+  createdAt    DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meal         Meal         @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([userId, mealId])
+  @@map("feedback")
+}
+
+model UserPreference {
+  id              String @id @default(cuid())
+  userId          String
+  preferenceKey   String
+  preferenceValue String
+
+  user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, preferenceKey])
+  @@map("user_preferences")
+}
+
+model HealthMetric {
+  id         String   @id @default(cuid())
+  userId     String
+  metricType String
+  value      Float
+  recordedAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricType])
+  @@map("health_metrics")
+}

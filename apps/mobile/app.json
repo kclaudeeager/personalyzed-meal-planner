@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Adaptive Meals",
+    "slug": "adaptive-meals",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "adaptive-meals",
+    "splash": {
+      "backgroundColor": "#09090b",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adaptivemeals.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090b"
+      },
+      "package": "com.adaptivemeals.app"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
