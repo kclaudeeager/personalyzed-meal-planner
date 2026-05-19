@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { apiClient } from '../../src/lib/api-client';
 
@@ -45,8 +46,10 @@ function formatDate(date: Date): string {
 
 export default function HomeScreen() {
   const { getToken, userId } = useAuth();
+  const router = useRouter();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const today = new Date();
   const weekStart = getMonday(today);
 
@@ -74,6 +77,26 @@ export default function HomeScreen() {
     }
   }
 
+  async function generatePlan() {
+    if (!userId) return;
+    setGenerating(true);
+    try {
+      const token = await getToken();
+      const ws = formatDate(weekStart);
+      await apiClient(`/meal-plans/generate/${userId}`, {
+        method: 'POST',
+        body: { weekStart: ws },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert('Success', 'Weekly meal plan generated!');
+      fetchPlans();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to generate plan');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   const currentPlan = plans.find((p) => {
     const ws = new Date(p.weekStart);
     return formatDate(ws) === formatDate(weekStart);
@@ -98,6 +121,26 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.greeting}>Good {timeOfDay} 👋</Text>
         <Text style={styles.title}>This Week's Plan</Text>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <Pressable style={styles.actionButton} onPress={() => router.push('/recommendations')}>
+          <Text style={styles.actionIcon}>✨</Text>
+          <Text style={styles.actionText}>Recommend</Text>
+        </Pressable>
+        <Pressable style={styles.actionButton} onPress={generatePlan} disabled={generating}>
+          <Text style={styles.actionIcon}>📋</Text>
+          <Text style={styles.actionText}>{generating ? '...' : 'AI Plan'}</Text>
+        </Pressable>
+        <Pressable style={styles.actionButton} onPress={() => router.push('/shopping-list')}>
+          <Text style={styles.actionIcon}>🛒</Text>
+          <Text style={styles.actionText}>Shopping</Text>
+        </Pressable>
+        <Pressable style={styles.actionButton} onPress={fetchPlans}>
+          <Text style={styles.actionIcon}>🔄</Text>
+          <Text style={styles.actionText}>Refresh</Text>
+        </Pressable>
       </View>
 
       {loading ? (
@@ -246,6 +289,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  quickActions: {
+    flexDirection: 'row', gap: 8, marginBottom: 16,
+  },
+  actionButton: {
+    flex: 1, backgroundColor: '#18181b', borderRadius: 12, padding: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: '#27272a',
+  },
+  actionIcon: { fontSize: 20, marginBottom: 4 },
+  actionText: { fontSize: 11, color: '#a1a1aa', fontWeight: '600', textAlign: 'center' },
   primaryButton: {
     marginTop: 16,
     backgroundColor: '#22c55e',

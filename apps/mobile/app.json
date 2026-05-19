@@ -4,6 +4,7 @@
     "slug": "adaptive-meals",
     "version": "0.1.0",
     "orientation": "portrait",
+    "platforms": ["ios", "android"],
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "adaptive-meals",
@@ -21,7 +22,10 @@
       },
       "package": "com.adaptivemeals.app"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
     "experiments": {
       "typedRoutes": true
     }

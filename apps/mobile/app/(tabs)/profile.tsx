@@ -64,6 +64,24 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <View style={styles.linksSection}>
+        <Pressable style={styles.linkRow} onPress={() => router.push('/shopping-list')}>
+          <Text style={styles.linkIcon}>🛒</Text>
+          <Text style={styles.linkText}>Shopping List</Text>
+          <Text style={styles.linkArrow}>→</Text>
+        </Pressable>
+        <Pressable style={styles.linkRow} onPress={() => router.push('/feedback')}>
+          <Text style={styles.linkIcon}>💬</Text>
+          <Text style={styles.linkText}>Your Feedback</Text>
+          <Text style={styles.linkArrow}>→</Text>
+        </Pressable>
+        <Pressable style={styles.linkRow} onPress={() => router.push('/recommendations')}>
+          <Text style={styles.linkIcon}>✨</Text>
+          <Text style={styles.linkText}>Recommendations</Text>
+          <Text style={styles.linkArrow}>→</Text>
+        </Pressable>
+      </View>
+
       <Pressable style={styles.signOutButton} onPress={confirmSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </Pressable>
@@ -161,6 +179,14 @@ const styles = StyleSheet.create({
     color: '#52525b',
     textAlign: 'center',
   },
+  linksSection: { gap: 8, marginBottom: 16 },
+  linkRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#18181b',
+    borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#27272a',
+  },
+  linkIcon: { fontSize: 18, marginRight: 10 },
+  linkText: { fontSize: 15, color: '#f4f4f5', fontWeight: '500', flex: 1 },
+  linkArrow: { fontSize: 16, color: '#52525b' },
   signOutButton: {
     marginTop: 8,
     borderRadius: 12,

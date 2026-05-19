@@ -68,6 +68,22 @@ function InitialLayout() {
         name="onboarding"
         options={{ headerShown: false, presentation: 'fullScreenModal' }}
       />
+      <Stack.Screen
+        name="recommendations"
+        options={{ title: 'Recommendations', headerStyle: { backgroundColor: '#09090b' }, headerTintColor: '#f4f4f5' }}
+      />
+      <Stack.Screen
+        name="meal/[id]"
+        options={{ title: 'Meal Details', headerStyle: { backgroundColor: '#09090b' }, headerTintColor: '#f4f4f5' }}
+      />
+      <Stack.Screen
+        name="shopping-list"
+        options={{ title: 'Shopping List', headerStyle: { backgroundColor: '#09090b' }, headerTintColor: '#f4f4f5' }}
+      />
+      <Stack.Screen
+        name="feedback"
+        options={{ title: 'Feedback', headerStyle: { backgroundColor: '#09090b' }, headerTintColor: '#f4f4f5' }}
+      />
     </Stack>
   );
 }
