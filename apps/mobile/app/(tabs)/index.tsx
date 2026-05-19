@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useAuth } from '@clerk/clerk-expo';
 import { apiClient } from '../../src/lib/api-client';
-import { useUserStore } from '../../src/store/user-store';
 
-const API = 'http://localhost:4000/api';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER'] as const;
 const MEAL_LABELS: Record<string, string> = { BREAKFAST: '☀️', LUNCH: '🌤️', DINNER: '🌙' };
@@ -45,7 +44,7 @@ function formatDate(date: Date): string {
 }
 
 export default function HomeScreen() {
-  const userId = useUserStore((s) => s.userId);
+  const { getToken, userId } = useAuth();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const today = new Date();
@@ -62,8 +61,10 @@ export default function HomeScreen() {
   async function fetchPlans() {
     setLoading(true);
     try {
+      const token = await getToken();
       const json = await apiClient<{ success: boolean; data: MealPlan[] }>(
         `/meal-plans/user/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setPlans(json.data ?? []);
     } catch {
@@ -112,7 +113,6 @@ export default function HomeScreen() {
         </View>
       ) : currentPlan ? (
         <View style={styles.planContainer}>
-          {/* Week Calendar Grid */}
           <View style={styles.calendarGrid}>
             {weekDates.map((date, dayIndex) => {
               const entries = getEntriesForDay(dayIndex);
@@ -145,7 +145,6 @@ export default function HomeScreen() {
             })}
           </View>
 
-          {/* Today's Details */}
           <View style={styles.todaySection}>
             <Text style={styles.sectionTitle}>Today's Meals</Text>
             {MEAL_TYPES.map((type) => {

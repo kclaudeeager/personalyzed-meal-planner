@@ -1,10 +1,45 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { useUser, useAuth } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
+  const { user } = useUser();
+  const { signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.replace('/sign-in');
+  }
+
+  function confirmSignOut() {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: handleSignOut },
+    ]);
+  }
+
+  const email = user?.primaryEmailAddress?.emailAddress ?? 'No email';
+  const fullName = user?.fullName ?? email.split('@')[0] ?? 'User';
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profile</Text>
       <Text style={styles.subtitle}>Your preferences, health goals, and settings</Text>
+
+      <View style={styles.card}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {fullName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.userName}>{fullName}</Text>
+            <Text style={styles.userEmail}>{email}</Text>
+          </View>
+        </View>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Preferences</Text>
@@ -28,6 +63,10 @@ export default function ProfileScreen() {
           <Text style={styles.placeholderText}>Set up your health goals to get better recommendations</Text>
         </View>
       </View>
+
+      <Pressable style={styles.signOutButton} onPress={confirmSignOut}>
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </Pressable>
     </View>
   );
 }
@@ -57,6 +96,34 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#27272a',
+  },
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#22c55e',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#09090b',
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f4f4f5',
+  },
+  userEmail: {
+    fontSize: 13,
+    color: '#71717a',
+    marginTop: 2,
   },
   cardTitle: {
     fontSize: 16,
@@ -93,5 +160,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#52525b',
     textAlign: 'center',
+  },
+  signOutButton: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ef444430',
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  signOutText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ef4444',
   },
 });

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
+import { UserButton, SignInButton, useAuth } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Utensils,
@@ -13,6 +14,7 @@ import {
   ChefHat,
   Calendar,
   ShoppingCart,
+  LogIn,
 } from 'lucide-react';
 
 const navigation = [
@@ -28,6 +30,7 @@ const navigation = [
 
 export function Sidebar(): React.JSX.Element {
   const pathname = usePathname();
+  const { isSignedIn } = useAuth();
 
   return (
     <aside className="glass-dark flex w-64 flex-col border-r border-surface-800/50">
@@ -80,7 +83,23 @@ export function Sidebar(): React.JSX.Element {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-surface-800/50 p-4">
+      <div className="border-t border-surface-800/50 p-4 space-y-3">
+        {isSignedIn ? (
+          <div className="flex items-center gap-3 rounded-xl bg-surface-900/50 px-3 py-2.5">
+            <UserButton />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-surface-200/80 truncate">Signed in</p>
+              <p className="text-[10px] text-surface-200/30">Clerk</p>
+            </div>
+          </div>
+        ) : (
+          <SignInButton mode="modal">
+            <button className="flex w-full items-center gap-3 rounded-xl bg-surface-900/50 px-3 py-2.5 text-sm text-surface-200/60 hover:bg-surface-800/50 hover:text-surface-100 transition-colors">
+              <LogIn className="h-4 w-4" />
+              Sign In
+            </button>
+          </SignInButton>
+        )}
         <div className="rounded-xl bg-gradient-to-r from-primary-900/30 to-accent-900/30 p-3">
           <p className="text-xs font-medium text-surface-200/60">Adaptive Meal Platform</p>
           <p className="text-[10px] text-surface-200/30">v0.1.0 — MVP</p>

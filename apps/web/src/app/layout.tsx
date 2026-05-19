@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Outfit } from 'next/font/google';
 import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
 import { Sidebar } from '@/components/sidebar';
 
 const inter = Inter({
@@ -29,12 +30,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
         suppressHydrationWarning
         className={`${inter.variable} ${outfit.variable} bg-surface-950 text-surface-100 min-h-screen`}
       >
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 overflow-auto">
-            <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
-          </main>
-        </div>
+        <ClerkProvider>
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="flex-1 overflow-auto">
+              <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+            </main>
+          </div>
+        </ClerkProvider>
       </body>
     </html>
   );

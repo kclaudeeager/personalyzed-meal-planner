@@ -4,12 +4,13 @@
   "private": true,
   "description": "Adaptive Meal Planning Platform for Rwanda — AI-powered personalized meal recommendations",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "dev:api": "turbo run dev --filter=api",
-    "dev:web": "turbo run dev --filter=web",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
+    "dev": "dotenv -e .env -- turbo run dev",
+    "dev:api": "dotenv -e .env -- turbo run dev --filter=api",
+    "dev:web": "dotenv -e .env -- turbo run dev --filter=web",
+    "dev:mobile": "dotenv -e .env -- turbo run dev --filter=mobile",
+    "build": "dotenv -e .env -- turbo run build",
+    "lint": "dotenv -e .env -- turbo run lint",
+    "test": "dotenv -e .env -- turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "start": "bash scripts/start.sh",
@@ -21,12 +22,13 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "^2.5.0",
-    "prettier": "^3.5.0",
-    "eslint": "^9.20.0",
-    "typescript": "^5.7.0",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0"
+    "@typescript-eslint/parser": "^8.25.0",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^9.20.0",
+    "prettier": "^3.5.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {
