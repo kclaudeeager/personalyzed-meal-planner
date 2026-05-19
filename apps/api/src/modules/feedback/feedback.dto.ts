@@ -4,15 +4,7 @@
 
 import { IsString, IsInt, IsEnum, IsOptional, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-enum FeedbackType {
-  LIKED = 'LIKED',
-  DISLIKED = 'DISLIKED',
-  TOO_EXPENSIVE = 'TOO_EXPENSIVE',
-  TOO_DIFFICULT = 'TOO_DIFFICULT',
-  TOO_REPETITIVE = 'TOO_REPETITIVE',
-  TOO_TIME_CONSUMING = 'TOO_TIME_CONSUMING',
-}
+import { FeedbackType } from '@meal-platform/types';
 
 export class SubmitFeedbackDto {
   @ApiProperty({ example: 'user_cuid_123' })

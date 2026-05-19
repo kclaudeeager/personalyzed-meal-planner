@@ -2,8 +2,8 @@
 // Users Controller — REST endpoints for user management
 // =============================================================================
 
-import { Controller, Get, Patch, Post, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Patch, Post, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdatePreferencesDto } from './users.dto';
 
@@ -12,6 +12,18 @@ import { CreateUserDto, UpdatePreferencesDto } from './users.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List all users' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    const result = await this.usersService.findAll(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 50,
+    );
+    return { success: true, ...result };
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new user (called after Clerk registration)' })

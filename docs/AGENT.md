@@ -19,6 +19,9 @@ The platform must:
 - Support health and nutrition goals
 - Scale across African markets
 - Enable AI-assisted software development workflows
+- Provide weekly meal planning with AI-generated suggestions
+- Generate shopping lists from meal plans with cost estimation
+- Import recipes from URLs and images
 
 ---
 
@@ -32,14 +35,12 @@ The platform must:
 - Expo Router
 - React Query
 - Zustand (state management)
-- NativeWind or Tailwind RN
 
 ### Web Dashboard
 - Next.js 15
 - TypeScript
 - App Router
 - Tailwind CSS
-- shadcn/ui
 
 ---
 
@@ -48,13 +49,11 @@ The platform must:
 ### API Layer
 - NestJS
 - TypeScript
-- REST + GraphQL hybrid architecture
+- REST API
 - Swagger/OpenAPI documentation
 
 ### Authentication
 - Clerk
-OR
-- Auth0
 
 ### Database
 - PostgreSQL
@@ -72,35 +71,15 @@ OR
 ### Initial Engine
 - Rule-based recommendation engine
 
-### Future Evolution
-- Collaborative filtering
-- Vector embeddings
-- LLM-powered contextual recommendations
-
 ### AI Services
-- OpenAI API
-- Local recommendation scoring services
+- OpenAI API (GPT-4o for image/video parsing, recipe translation)
 
 ---
 
 ## Infrastructure
-
-### Hosting
-- Railway (MVP)
-OR
-- Render
-
-### Future Scale
-- AWS
-- Kubernetes
-
-### Storage
-- Cloudinary
-OR
-- AWS S3
-
-### CI/CD
-- GitHub Actions
+- Railway (MVP) or Render
+- Docker Compose for local dev
+- GitHub Actions for CI/CD
 
 ---
 
@@ -118,13 +97,11 @@ packages/
   ui/
   types/
   recommendation-engine/
-  ai-engine/
   shared/
   config/
 
 infra/
   docker/
-  terraform/
 
 docs/
 ```
@@ -143,14 +120,9 @@ Responsibilities:
 - Household context
 
 Key Fields:
-- age
-- gender
-- household_size
-- dietary_preferences
-- allergies
-- budget_range
-- cooking_skill
-- activity_level
+- age, gender, household_size
+- dietary_preferences, allergies
+- budget_range, cooking_skill, activity_level
 
 ---
 
@@ -162,16 +134,13 @@ Responsibilities:
 - Nutrition profiles
 - Cooking instructions
 - Video references
+- URL recipe import (schema.org/JSON-LD parsing)
+- OpenAI image/video recipe parsing
 
 Key Fields:
-- meal_name
-- ingredients
-- preparation_time
-- estimated_cost
-- calories
-- tags
-- cuisine_type
-- complexity
+- meal_name, ingredients, preparation_time
+- estimated_cost, calories, tags
+- cuisine_type, complexity
 
 ---
 
@@ -184,21 +153,44 @@ Responsibilities:
 - Recommendation ranking
 
 Inputs:
-- user preferences
-- meal history
-- budget
-- time constraints
-- activity data
-- meal ratings
+- user preferences, meal history, budget
+- time constraints, meal ratings
 
 Outputs:
-- breakfast recommendations
-- lunch recommendations
-- dinner recommendations
+- breakfast, lunch, dinner recommendations
 
 ---
 
-## 4.4 Feedback Module
+## 4.4 Meal Planner Module
+
+Responsibilities:
+- Weekly meal plan creation
+- Calendar-based entry management
+- AI generation from recommendations
+- Manual entry/slot assignment
+
+Key Data:
+- meal_plan (weekStart, weekEnd, userId)
+- meal_plan_entry (mealId, mealType, dayOfWeek, mealPlanId)
+
+---
+
+## 4.5 Shopping List Module
+
+Responsibilities:
+- Ingredient consolidation from meal plans
+- Quantity scaling by household size
+- Total cost calculation
+- Item check-off tracking
+- Text export
+
+Key Data:
+- shopping_list (userId, totalCost, weekStart, weekEnd)
+- shopping_list_item (ingredientName, quantity, unit, estimatedCost, isChecked)
+
+---
+
+## 4.6 Feedback Module
 
 Responsibilities:
 - User meal ratings
@@ -207,338 +199,149 @@ Responsibilities:
 - Taste learning
 
 Feedback Types:
-- liked
-- disliked
-- too expensive
-- too difficult
-- too repetitive
-- too time consuming
+- liked, disliked, too_expensive, too_difficult, too_repetitive, too_time_consuming
 
 ---
 
-## 4.5 Video Content Module
-
-Responsibilities:
-- Store tutorial references
-- Attach cooking videos to meals
-- Creator management
-
-Sources:
-- YouTube
-- TikTok
-- Original content
-
----
-
-# 5. Database Design (Initial)
+# 5. Database Design
 
 ## Users
-
 ```sql
 users
-- id
-- email
-- full_name
-- age_range
-- household_size
-- budget_level
-- activity_level
-- created_at
+- id, clerkId, email, full_name
+- age_range, gender, household_size
+- budget_level, activity_level, cooking_skill
+- dietary_preferences[], allergies[]
+- created_at, updated_at
 ```
-
----
 
 ## Meals
-
 ```sql
 meals
-- id
-- title
-- description
-- preparation_time
-- estimated_cost
-- calories
-- cuisine_type
-- complexity
+- id, title, description, preparation_time
+- estimated_cost, calories, cuisine_type
+- complexity, tags[], image_url
+- created_at, updated_at
 ```
 
----
-
-## Ingredients
-
+## Meal Plans
 ```sql
-ingredients
-- id
-- name
-- local_availability
-- average_cost
+meal_plans
+- id, user_id, week_start, week_end, name
+- created_at, updated_at
+
+meal_plan_entries
+- id, meal_plan_id, meal_id
+- meal_type (BREAKFAST/LUNCH/DINNER)
+- day_of_week (0-6), sort_order
 ```
 
----
-
-## Meal Ingredients
-
+## Shopping Lists
 ```sql
-meal_ingredients
-- meal_id
-- ingredient_id
-- quantity
+shopping_lists
+- id, user_id, name, total_cost
+- week_start, week_end
+- created_at, updated_at
+
+shopping_list_items
+- id, shopping_list_id
+- ingredient_id (nullable), ingredient_name
+- quantity, unit, estimated_cost, is_checked
 ```
 
----
-
-## Recommendations
-
+## Ingredients / Nutrition / Videos
 ```sql
-recommendations
-- id
-- user_id
-- meal_id
-- recommendation_score
-- meal_type
-- created_at
+ingredients - id, name, local_availability, average_cost
+meal_ingredients - meal_id, ingredient_id, quantity, unit
+nutrition_profiles - id, meal_id, protein, carbs, fat, fiber, vitamins
+video_references - id, meal_id, url, source, title, creator_name
 ```
 
----
-
-## Feedback
-
+## Recommendations / Feedback
 ```sql
-feedback
-- id
-- user_id
-- meal_id
-- rating
-- feedback_type
-- comment
+recommendations - id, user_id, meal_id, recommendation_score, meal_type, created_at
+feedback - id, user_id, meal_id, rating, feedback_type, comment, created_at
 ```
 
 ---
 
-# 6. Initial Recommendation Algorithm
+# 6. API Endpoints
 
-## Phase 1 — Rule-Based Scoring
-
-Example Logic:
-
-```typescript
-score =
-  preferenceMatch +
-  budgetCompatibility +
-  cookingTimeCompatibility +
-  nutritionScore +
-  historicalEngagement
+## Core
 ```
+GET    /api/health              Health check
+GET    /api/users               List users
+POST   /api/users               Create user
+GET    /api/users/:id           Get user
+PATCH  /api/users/:id/preferences  Update preferences
 
-Rules:
-- Reduce repeated meals
-- Prefer affordable meals
-- Prioritize liked meals
-- Match user cooking skill
+GET    /api/meals               List meals (filterable)
+GET    /api/meals/:id           Get meal detail
+POST   /api/meals               Create meal
+POST   /api/meals/import        Import recipe from URL
+POST   /api/meals/shopping-list Generate shopping list
 
----
+GET    /api/recommendations/daily/:userId  Daily recs
+POST   /api/feedback            Submit feedback
 
-## Phase 2 — Behavioral Learning
+POST   /api/meal-plans          Create meal plan
+GET    /api/meal-plans/user/:userId    User's plans
+POST   /api/meal-plans/entry    Set entry
+POST   /api/meal-plans/generate/:userId AI generate plan
 
-Add:
-- collaborative filtering
-- recommendation weighting
-- user similarity analysis
-
----
-
-## Phase 3 — AI Personalization
-
-Add:
-- conversational assistant
-- ingredient substitution
-- adaptive weekly planning
-- predictive recommendations
-
----
-
-# 7. API Design
-
-## REST Endpoints
-
-### Auth
-```http
-POST /auth/register
-POST /auth/login
-```
-
-### Users
-```http
-GET /users/me
-PATCH /users/preferences
-```
-
-### Meals
-```http
-GET /meals
-GET /meals/:id
-```
-
-### Recommendations
-```http
-GET /recommendations/daily
-```
-
-### Feedback
-```http
-POST /feedback
+GET    /api/shopping-lists/user/:userId  User's lists
+PATCH  /api/shopping-lists/item/:itemId  Toggle item
+GET    /api/shopping-lists/:id/export    Export as text
 ```
 
 ---
 
-# 8. AI-Agent Friendly Engineering Rules
+# 7. AI Features Inspired by Mealie
 
-## Mandatory Standards
+## URL Recipe Import
+- Parses schema.org/JSON-LD Recipe data from webpage
+- Extracts title, description, prep time, calories, cuisine type, tags
+- Creates a new meal in the catalog
+- Fallback to HTML title parsing
 
-- TypeScript everywhere
-- Strong typing
-- Shared interfaces
-- Small isolated modules
-- OpenAPI documentation
-- Clean architecture
-- Feature-based structure
+## OpenAI Image-to-Recipe
+- GPT-4o vision API parses recipe from photo
+- Returns structured JSON with title, ingredients, instructions
+- Configurable via OPENAI_API_KEY env var
 
----
+## OpenAI Video-to-Recipe
+- Whisper transcription via GPT-4o audio
+- Parses transcribed cooking video into recipe format
 
-## Coding Conventions
-
-### Naming
-- camelCase for variables
-- PascalCase for components
-- kebab-case for folders
-
-### Folder Strategy
-Feature-based architecture:
-
-```bash
-modules/
-  users/
-  meals/
-  recommendations/
-  feedback/
-```
+## Recipe Translation
+- Translates recipes to Kinyarwanda or other languages
+- Preserves structure and measurements
 
 ---
 
-## Documentation Requirements
+# 8. Evolution Path
 
-Every module must include:
-- README.md
-- architecture notes
-- API examples
-- data contracts
-
----
-
-# 9. Initial Development Phases
-
-## Phase 1 — Foundation
-
-Deliverables:
-- monorepo setup
-- authentication
-- PostgreSQL schema
-- Prisma setup
-- API scaffolding
-- mobile shell
-
-Duration:
-2 weeks
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1 | Foundation: monorepo, auth, DB schema, API scaffolding, mobile shell | ✅ |
+| 2 | Meal System: CRUD, ingredients, videos, URL import | ✅ |
+| 3 | Recommendation Engine: rule-based scoring, daily recs | ✅ |
+| 4 | **Meal Planner + Shopping List**: weekly plans, consolidated lists | ✅ New |
+| 5 | **AI Features**: OpenAI image/video parsing, translation | ✅ Service Ready |
+| 6 | Feedback Loop: behavioral learning, personalization | 🔲 |
+| 7 | Advanced AI: collaborative filtering, vector embeddings | 🔲 |
+| 8 | Conversational AI Assistant | 🔲 |
 
 ---
 
-## Phase 2 — Meal System
+# 9. Inspiration from Mealie
 
-Deliverables:
-- meal CRUD
-- ingredient system
-- video attachment
-- meal categorization
+Key features adapted from [Mealie](https://github.com/mealie-recipes/mealie) (12k+ stars):
 
-Duration:
-2 weeks
+1. **URL Recipe Import** — Schema.org/JSON-LD scraping adapted from Mealie's recipe scraper
+2. **Shopping List Generation** — Consolidated ingredient lists from meal plans (scaled by household)
+3. **Weekly Meal Calendar** — Day-by-day meal type slots (Breakfast/Lunch/Dinner)
+4. **OpenAI Integration** — Image-to-recipe and video-to-recipe parsing
+5. **Data Management** — Bulk operations and export capabilities
 
----
-
-## Phase 3 — Recommendation Engine
-
-Deliverables:
-- rule-based recommendation engine
-- scoring system
-- daily recommendations
-- recommendation persistence
-
-Duration:
-3 weeks
-
----
-
-## Phase 4 — Feedback Loop
-
-Deliverables:
-- meal feedback
-- engagement tracking
-- personalization improvements
-
-Duration:
-2 weeks
-
----
-
-## Phase 5 — AI Features
-
-Deliverables:
-- conversational meal assistant
-- smart substitutions
-- adaptive planning
-
-Duration:
-ongoing
-
----
-
-# 10. Immediate Next Steps
-
-## Week 1 Priorities
-
-1. Setup monorepo
-2. Setup PostgreSQL
-3. Setup NestJS API
-4. Setup Prisma schema
-5. Setup Expo mobile app
-6. Define initial meal dataset
-7. Build onboarding flow
-
----
-
-# 11. Success Metrics
-
-## Product Metrics
-- daily active users
-- recommendation acceptance rate
-- repeat usage
-- retention
-- average meals viewed
-
-## Recommendation Metrics
-- recommendation click-through rate
-- meal completion rate
-- recommendation satisfaction score
-
----
-
-# 12. Long-Term Vision
-
-The long-term objective is to build a localized food intelligence platform for Africa capable of:
-
-- contextual nutrition guidance
-- adaptive meal planning
-- grocery optimization
-- health integration
-- AI-assisted household food management
-
+These features were adapted to fit our TypeScript/NestJS stack and AI-personalization focus, rather than Mealie's Python/Vue recipe-management approach.

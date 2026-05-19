@@ -4,7 +4,7 @@ Base URL: `http://localhost:4000/api`
 
 Swagger UI: `http://localhost:4000/api/docs`
 
-## Endpoints
+## Modules
 
 ### Health
 
@@ -16,6 +16,7 @@ Swagger UI: `http://localhost:4000/api/docs`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/api/users` | List all users (paginated) |
 | POST | `/api/users` | Create user (after Clerk registration) |
 | GET | `/api/users/:id` | Get user profile with preferences |
 | GET | `/api/users/clerk/:clerkId` | Get user by Clerk ID |
@@ -25,9 +26,11 @@ Swagger UI: `http://localhost:4000/api/docs`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/meals` | List meals (filterable) |
+| GET | `/api/meals` | List meals (filterable, paginated) |
 | GET | `/api/meals/:id` | Get meal details with ingredients, nutrition, videos |
 | POST | `/api/meals` | Create a new meal |
+| POST | `/api/meals/import` | Import a recipe from a URL (schema.org parsing) |
+| POST | `/api/meals/shopping-list` | Generate shopping list from a meal plan |
 
 **Query Parameters for GET /api/meals:**
 
@@ -45,7 +48,7 @@ Swagger UI: `http://localhost:4000/api/docs`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/recommendations/daily/:userId` | Get daily recommendations |
+| GET | `/api/recommendations/daily/:userId` | Get daily recommendations (breakfast, lunch, dinner) |
 
 ### Feedback
 
@@ -54,6 +57,27 @@ Swagger UI: `http://localhost:4000/api/docs`
 | POST | `/api/feedback` | Submit meal feedback |
 | GET | `/api/feedback/user/:userId` | Get user's feedback history |
 | GET | `/api/feedback/meal/:mealId` | Get meal feedback with stats |
+
+### Meal Plans
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/meal-plans?userId=x` | Create a weekly meal plan |
+| GET | `/api/meal-plans/user/:userId` | Get all meal plans for a user |
+| GET | `/api/meal-plans/:id` | Get meal plan by ID with entries |
+| POST | `/api/meal-plans/entry` | Set a meal plan entry (create or update by day+type) |
+| DELETE | `/api/meal-plans/entry/:entryId` | Remove a meal plan entry |
+| POST | `/api/meal-plans/generate/:userId` | Generate meal plan from latest recommendations |
+
+### Shopping Lists
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/shopping-lists/user/:userId` | Get all shopping lists for a user |
+| GET | `/api/shopping-lists/:id` | Get shopping list with items |
+| PATCH | `/api/shopping-lists/item/:itemId` | Toggle item checked state |
+| GET | `/api/shopping-lists/:id/export` | Export as plain text |
+| DELETE | `/api/shopping-lists/:id` | Delete a shopping list |
 
 ## Response Format
 

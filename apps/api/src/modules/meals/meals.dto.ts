@@ -13,20 +13,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-
-enum CuisineType {
-  RWANDAN = 'RWANDAN',
-  EAST_AFRICAN = 'EAST_AFRICAN',
-  AFRICAN = 'AFRICAN',
-  INTERNATIONAL = 'INTERNATIONAL',
-  FUSION = 'FUSION',
-}
-
-enum Complexity {
-  EASY = 'EASY',
-  MEDIUM = 'MEDIUM',
-  HARD = 'HARD',
-}
+import { CuisineType, Complexity } from '@meal-platform/types';
 
 export class CreateMealDto {
   @ApiProperty({ example: 'Isombe with Ubugali' })
@@ -117,4 +104,120 @@ export class MealQueryDto {
   @IsInt()
   @Min(1)
   limit?: number;
+}
+
+export class GenerateShoppingListDto {
+  @ApiProperty({ example: 'meal_plan_id_123' })
+  @IsString()
+  mealPlanId!: string;
+}
+
+export class ImportRecipeDto {
+  @ApiProperty({ example: 'https://example.com/recipe' })
+  @IsString()
+  url!: string;
+}
+
+export class UpdateMealDto {
+  @ApiPropertyOptional({ example: 'Isombe with Ubugali' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ example: 'Traditional Rwandan cassava leaves dish served with ubugali' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ example: 45 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  preparationTime?: number;
+
+  @ApiPropertyOptional({ example: 3500 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  estimatedCost?: number;
+
+  @ApiPropertyOptional({ example: 450 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  calories?: number;
+
+  @ApiPropertyOptional({ enum: CuisineType })
+  @IsOptional()
+  @IsEnum(CuisineType)
+  cuisineType?: CuisineType;
+
+  @ApiPropertyOptional({ enum: Complexity })
+  @IsOptional()
+  @IsEnum(Complexity)
+  complexity?: Complexity;
+
+  @ApiPropertyOptional({ example: ['traditional', 'vegetarian', 'lunch'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+}
+
+export class AddVideoDto {
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx' })
+  @IsString()
+  url!: string;
+
+  @ApiProperty({ example: 'YOUTUBE', enum: ['YOUTUBE', 'TIKTOK', 'ORIGINAL'] })
+  @IsString()
+  source!: string;
+
+  @ApiProperty({ example: 'How to Make Rwandan Brochettes' })
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional({ example: 'Rwandan Cooking' })
+  @IsOptional()
+  @IsString()
+  creatorName?: string;
+}
+
+export class ImportRecipeResponseDto {
+  success!: boolean;
+  data!: Record<string, unknown>;
+  message!: string;
+}
+
+export class ParseImageDto {
+  @ApiProperty({ example: 'https://example.com/recipe-photo.jpg' })
+  @IsString()
+  imageUrl!: string;
+
+  @ApiPropertyOptional({ example: 'My Homemade Dish' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+}
+
+export class ParseVideoDto {
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=xxxx' })
+  @IsString()
+  videoUrl!: string;
+}
+
+export class TranslateRecipeDto {
+  @ApiProperty({ example: 'Full recipe text to translate...' })
+  @IsString()
+  recipeText!: string;
+
+  @ApiPropertyOptional({ example: 'Kinyarwanda', default: 'Kinyarwanda' })
+  @IsOptional()
+  @IsString()
+  targetLanguage?: string;
 }

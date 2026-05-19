@@ -157,3 +157,83 @@ export interface RecordHealthMetricRequest {
   metricType: string;
   value: number;
 }
+
+// ---------------------------------------------------------------------------
+// Meal Plans
+// ---------------------------------------------------------------------------
+
+export interface CreateMealPlanRequest {
+  weekStart: string; // ISO date (Monday)
+  name?: string;
+}
+
+export interface SetMealPlanEntryRequest {
+  mealPlanId: string;
+  mealId: string;
+  mealType: string;
+  dayOfWeek: number;
+}
+
+export interface MealPlanResponse {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  name: string;
+  entries: Array<{
+    id: string;
+    mealId: string;
+    mealType: string;
+    dayOfWeek: number;
+    meal: Meal;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// Shopping List
+// ---------------------------------------------------------------------------
+
+export interface GenerateShoppingListRequest {
+  mealPlanId: string;
+}
+
+export interface ShoppingListResponse {
+  id: string;
+  name: string;
+  totalCost: number;
+  items: Array<{
+    id: string;
+    ingredientName: string;
+    quantity: number;
+    unit: string;
+    estimatedCost: number;
+    isChecked: boolean;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// Recipe Import
+// ---------------------------------------------------------------------------
+
+export interface ImportRecipeRequest {
+  url: string;
+}
+
+export interface ImportRecipeResponse {
+  success: boolean;
+  data: Meal;
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
+// OpenAI Recipe Parser
+// ---------------------------------------------------------------------------
+
+export interface ParseImageRecipeRequest {
+  imageUrl: string;
+  title?: string;
+}
+
+export interface ParseVideoRecipeRequest {
+  videoUrl: string;
+  source: string;
+}

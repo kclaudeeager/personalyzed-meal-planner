@@ -50,6 +50,36 @@ export const RWANDAN_CUISINE_TAGS = [
   'ibirayi',
   'ibitoke',
   'amandazi',
-  'ikinyiga',
+  'umunyige',
   'urwagwa',
 ] as const;
+
+/** Day name mapping (0=Sunday ... 6=Saturday) */
+export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+/** Full day names */
+export const DAY_NAMES_FULL = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+] as const;
+
+/** Default number of days for a meal plan */
+export const MEAL_PLAN_DAYS = 7;
+
+/** Meal plan week start day (1 = Monday) */
+export const WEEK_START_DAY = 1;
+
+/** Shopping list grouping categories */
+export const SHOPPING_LIST_CATEGORIES = [
+  'Produce',
+  'Grains & Starches',
+  'Protein',
+  'Dairy',
+  'Spices & Seasonings',
+  'Oils & Fats',
+  'Beverages',
+  'Other',
+] as const;
+
+/** Recipe import user agent */
+export const RECIPE_IMPORT_USER_AGENT =
+  'Mozilla/5.0 (compatible; MealPlatformBot/1.0; +https://mealplatform.rw/bot)';

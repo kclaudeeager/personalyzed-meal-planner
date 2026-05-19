@@ -4,42 +4,13 @@
 
 import { IsString, IsOptional, IsInt, IsEnum, IsArray, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-enum AgeRange {
-  UNDER_18 = 'UNDER_18',
-  AGE_18_25 = 'AGE_18_25',
-  AGE_26_35 = 'AGE_26_35',
-  AGE_36_45 = 'AGE_36_45',
-  AGE_46_55 = 'AGE_46_55',
-  OVER_55 = 'OVER_55',
-}
-
-enum Gender {
-  MALE = 'MALE',
-  FEMALE = 'FEMALE',
-  OTHER = 'OTHER',
-  PREFER_NOT_TO_SAY = 'PREFER_NOT_TO_SAY',
-}
-
-enum BudgetLevel {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-}
-
-enum ActivityLevel {
-  SEDENTARY = 'SEDENTARY',
-  LIGHT = 'LIGHT',
-  MODERATE = 'MODERATE',
-  ACTIVE = 'ACTIVE',
-  VERY_ACTIVE = 'VERY_ACTIVE',
-}
-
-enum CookingSkill {
-  BEGINNER = 'BEGINNER',
-  INTERMEDIATE = 'INTERMEDIATE',
-  ADVANCED = 'ADVANCED',
-}
+import {
+  AgeRange,
+  Gender,
+  BudgetLevel,
+  ActivityLevel,
+  CookingSkill,
+} from '@meal-platform/types';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'clerk_abc123' })

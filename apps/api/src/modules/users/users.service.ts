@@ -10,6 +10,18 @@ import { CreateUserDto, UpdatePreferencesDto } from './users.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAll(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({ skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      this.prisma.user.count(),
+    ]);
+    return {
+      data: users,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   async findByClerkId(clerkId: string) {
     const user = await this.prisma.user.findUnique({
       where: { clerkId },

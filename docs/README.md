@@ -63,6 +63,20 @@ pnpm dev:web     # Start web dashboard only (http://localhost:3000)
 
 Swagger UI is available at: `http://localhost:4000/api/docs`
 
+## 🍽️ Key Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Personalized Recommendations** | Rule-based scoring engine (preferences, budget, time, nutrition, history) | ✅ Phase 1 |
+| **Meal Catalog** | Full CRUD with ingredients, nutrition profiles, video references | ✅ |
+| **Feedback System** | Rate meals (1-5), mark as liked/disliked/too expensive/etc. | ✅ |
+| **Weekly Meal Planner** | Calendar-based planner with AI-generated suggestions from recommendations | ✅ New |
+| **Shopping List Generator** | Auto-generate categorized shopping lists from meal plans with scaled quantities | ✅ New |
+| **URL Recipe Import** | Import recipes from any cooking website via schema.org/JSON-LD parsing | ✅ New |
+| **OpenAI Integration** | Image-to-recipe, video-to-recipe, and recipe translation | ✅ Service Ready |
+| **Mobile App** | Expo React Native with weekly meal plan calendar view | ✅ |
+| **User Management** | Profile, preferences, health metrics, household context | ✅ |
+
 ## 📦 Tech Stack
 
 | Layer | Technology |

@@ -118,6 +118,8 @@ model User {
   feedback            Feedback[]
   preferences         UserPreference[]
   healthMetrics       HealthMetric[]
+  mealPlans           MealPlan[]
+  shoppingLists       ShoppingList[]
 
   @@map("users")
 }
@@ -136,13 +138,26 @@ model Meal {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  images            MealImage[]
   ingredients       MealIngredient[]
   nutritionProfile  NutritionProfile?
   videos            VideoReference[]
   recommendations   Recommendation[]
   feedback          Feedback[]
+  mealPlanEntries   MealPlanEntry[]
 
   @@map("meals")
+}
+
+model MealImage {
+  id        String   @id @default(cuid())
+  mealId    String
+  url       String
+  createdAt DateTime @default(now())
+
+  meal      Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("meal_images")
 }
 
 model Ingredient {
@@ -152,6 +167,7 @@ model Ingredient {
   averageCost       Float             // RWF
 
   meals             MealIngredient[]
+  shoppingListItems ShoppingListItem[]
 
   @@map("ingredients")
 }
@@ -251,4 +267,66 @@ model HealthMetric {
 
   @@index([userId, metricType])
   @@map("health_metrics")
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime // Monday of the plan week
+  weekEnd   DateTime // Sunday of the plan week
+  name      String   @default("Weekly Meal Plan")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries   MealPlanEntry[]
+
+  @@unique([userId, weekStart])
+  @@map("meal_plans")
+}
+
+model MealPlanEntry {
+  id        String   @id @default(cuid())
+  mealPlanId String
+  mealId    String
+  mealType  MealType
+  dayOfWeek Int      // 0=Sunday, 1=Monday ... 6=Saturday
+  sortOrder Int      @default(0)
+
+  mealPlan  MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  meal      Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("meal_plan_entries")
+}
+
+model ShoppingList {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   @default("Shopping List")
+  weekStart DateTime?
+  weekEnd   DateTime?
+  totalCost Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id             String        @id @default(cuid())
+  shoppingListId String
+  ingredientId   String?
+  ingredientName String
+  quantity       Float
+  unit           String
+  estimatedCost  Float         @default(0)
+  isChecked      Boolean       @default(false)
+
+  shoppingList   ShoppingList  @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient?   @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  @@map("shopping_list_items")
 }

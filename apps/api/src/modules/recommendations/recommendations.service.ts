@@ -27,7 +27,7 @@ export class RecommendationsService {
       where: { userId, feedbackType: 'LIKED' },
       select: { mealId: true },
     });
-    const likedMealIds = likedFeedback.map((f) => f.mealId);
+    const likedMealIds = likedFeedback.map((f: { mealId: string }) => f.mealId);
 
     // 3. Get recently recommended meals (last 3 days)
     const threeDaysAgo = new Date();
@@ -36,7 +36,7 @@ export class RecommendationsService {
       where: { userId, createdAt: { gte: threeDaysAgo } },
       select: { mealId: true },
     });
-    const recentMealIds = recentRecs.map((r) => r.mealId);
+    const recentMealIds = recentRecs.map((r: { mealId: string }) => r.mealId);
 
     // 4. Build user context
     const userContext: UserContext = {
@@ -52,7 +52,7 @@ export class RecommendationsService {
 
     // 5. Fetch all meal candidates
     const rawMeals = await this.mealsService.getMealCandidates();
-    const candidates: MealCandidate[] = rawMeals.map((m) => ({
+    const candidates: MealCandidate[] = rawMeals.map((m: { id: string; title: string; estimatedCost: number; preparationTime: number; calories: number; complexity: string; cuisineType: string; tags: string[]; ingredients: Array<{ ingredient: { name: string } }> }) => ({
       id: m.id,
       title: m.title,
       estimatedCost: m.estimatedCost,
@@ -61,7 +61,7 @@ export class RecommendationsService {
       complexity: m.complexity,
       cuisineType: m.cuisineType,
       tags: m.tags,
-      ingredientNames: m.ingredients.map((mi) => mi.ingredient.name),
+      ingredientNames: m.ingredients.map((mi: { ingredient: { name: string } }) => mi.ingredient.name),
     }));
 
     // 6. Run recommendation engine for each meal type
@@ -87,7 +87,7 @@ export class RecommendationsService {
     });
 
     // 8. Return with meal details
-    const mealMap = new Map(rawMeals.map((m) => [m.id, m]));
+    const mealMap = new Map(rawMeals.map((m: { id: string }) => [m.id, m]));
     const enrich = (scored: typeof breakfast) =>
       scored.map((s) => ({
         score: s.totalScore,

@@ -4,6 +4,9 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+export const API_BASE = API_URL + '/api';
+export const API_HOST = API_URL;
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -151,4 +154,38 @@ export async function getRecommendationStats() {
     totalGenerated: number;
     todayCount: number;
   }>('/api/recommendations/stats');
+}
+
+// ---------------------------------------------------------------------------
+// Meal Plans
+// ---------------------------------------------------------------------------
+
+export async function getMealPlans(userId: string) {
+  return request<{ success: boolean; data: unknown[] }>(`/api/meal-plans/user/${userId}`);
+}
+
+export async function createMealPlan(userId: string, weekStart: string, name?: string) {
+  return request(`/api/meal-plans?userId=${userId}`, {
+    method: 'POST',
+    body: JSON.stringify({ weekStart, name }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Shopping Lists
+// ---------------------------------------------------------------------------
+
+export async function getShoppingLists(userId: string) {
+  return request<{ success: boolean; data: unknown[] }>(`/api/shopping-lists/user/${userId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Recipe Import
+// ---------------------------------------------------------------------------
+
+export async function importRecipe(url: string) {
+  return request<{ success: boolean; data: unknown; message: string }>('/api/meals/import', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
 }

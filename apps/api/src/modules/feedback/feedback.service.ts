@@ -38,7 +38,7 @@ export class FeedbackService {
     });
 
     const avgRating = feedback.length
-      ? feedback.reduce((sum, f) => sum + f.rating, 0) / feedback.length
+      ? feedback.reduce((sum: number, f: { rating: number }) => sum + f.rating, 0) / feedback.length
       : 0;
 
     return {

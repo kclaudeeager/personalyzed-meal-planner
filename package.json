@@ -12,6 +12,8 @@
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "start": "bash scripts/start.sh",
+    "seed": "DATABASE_URL=\"postgresql://mealplan:mealplan_dev@localhost:5433/adaptive_meals?schema=public\" pnpm --filter database prisma:seed",
     "db:generate": "pnpm --filter database prisma:generate",
     "db:push": "pnpm --filter database prisma:push",
     "db:migrate": "pnpm --filter database prisma:migrate",

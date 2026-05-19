@@ -5,6 +5,8 @@ import {
   Sparkles,
   TrendingUp,
   Clock,
+  Calendar,
+  ShoppingCart,
 } from 'lucide-react';
 import { getMeals, getHealth } from '@/lib/api';
 
@@ -121,6 +123,26 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
               <div>
                 <p className="text-sm font-medium">Add a Meal</p>
                 <p className="text-xs text-surface-200/40">Create a new meal in the catalog</p>
+              </div>
+            </a>
+            <a
+              href="/meal-planner"
+              className="flex items-center gap-3 rounded-xl bg-surface-900/50 p-4 transition-colors hover:bg-surface-800/50"
+            >
+              <Calendar className="h-5 w-5 text-primary-400" />
+              <div>
+                <p className="text-sm font-medium">Meal Planner</p>
+                <p className="text-xs text-surface-200/40">Weekly meal planning with AI suggestions</p>
+              </div>
+            </a>
+            <a
+              href="/shopping-list"
+              className="flex items-center gap-3 rounded-xl bg-surface-900/50 p-4 transition-colors hover:bg-surface-800/50"
+            >
+              <ShoppingCart className="h-5 w-5 text-accent-400" />
+              <div>
+                <p className="text-sm font-medium">Shopping List</p>
+                <p className="text-xs text-surface-200/40">Generate from meal plans, check off items</p>
               </div>
             </a>
             <a

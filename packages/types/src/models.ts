@@ -2,6 +2,12 @@
 // Domain Models — Core entity interfaces
 // =============================================================================
 
+// ---------------------------------------------------------------------------
+// DayOfWeek helper type
+// ---------------------------------------------------------------------------
+
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
 import type {
   AgeRange,
   ActivityLevel,
@@ -153,4 +159,53 @@ export interface HealthMetric {
   metricType: string;
   value: number;
   recordedAt: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Meal Plan
+// ---------------------------------------------------------------------------
+
+export interface MealPlan {
+  id: string;
+  userId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MealPlanEntry {
+  id: string;
+  mealPlanId: string;
+  mealId: string;
+  mealType: MealType;
+  dayOfWeek: DayOfWeek;
+  sortOrder: number;
+}
+
+// ---------------------------------------------------------------------------
+// Shopping List
+// ---------------------------------------------------------------------------
+
+export interface ShoppingList {
+  id: string;
+  userId: string;
+  name: string;
+  weekStart: Date | null;
+  weekEnd: Date | null;
+  totalCost: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  shoppingListId: string;
+  ingredientId: string | null;
+  ingredientName: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+  isChecked: boolean;
 }

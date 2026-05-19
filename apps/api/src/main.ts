@@ -5,10 +5,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Global prefix
   app.setGlobalPrefix('api');
@@ -24,6 +26,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Serve uploaded files
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   // CORS
   app.enableCors({
@@ -48,6 +53,8 @@ async function bootstrap() {
     .addTag('recommendations', 'Personalized meal recommendations')
     .addTag('feedback', 'User meal feedback')
     .addTag('health', 'Health check')
+    .addTag('meal-plans', 'Weekly meal planning')
+    .addTag('shopping-lists', 'Shopping list management')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

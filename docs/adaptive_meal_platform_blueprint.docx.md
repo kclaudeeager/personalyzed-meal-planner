@@ -57,7 +57,11 @@ The MVP should focus on recommendation quality and user engagement rather than a
 * Meal feedback system  
 * Meal detail pages with ingredients and preparation videos  
 * Basic recommendation engine using rule-based scoring  
-* User history tracking
+* User history tracking  
+* Weekly meal planner with AI-generated suggestions  
+* Shopping list generation from meal plans (household-scaled)  
+* URL recipe import (inspired by Mealie's recipe scraper)  
+* OpenAI-powered image and video recipe parsing
 
 # **7\. Recommended Technical Architecture**
 
@@ -129,13 +133,28 @@ docs/
 
 # **12\. Product Roadmap**
 
-6. Month 1–2: Research, meal data collection, MVP design  
-7. Month 3–4: Backend and recommendation engine  
-8. Month 5–6: Mobile app development  
-9. Month 7: User testing and iteration  
-10. Month 8: Kigali beta launch  
-11. Month 9+: Personalization and partnerships
+1. Month 1–2: Research, meal data collection, MVP design  
+2. Month 3–4: Backend, recommendation engine, meal planner  
+3. Month 5–6: Mobile app development, URL import, shopping lists  
+4. Month 7: User testing, AI features (image/video parsing)  
+5. Month 8: Kigali beta launch  
+6. Month 9+: Personalization, partnerships, collaborative filtering
 
 # **13\. Strategic Positioning**
 
-The long-term opportunity is to build Africa’s leading adaptive food intelligence platform. The company’s defensibility will come from localized meal data, behavioral learning, nutrition intelligence, and culturally contextual recommendation systems.
+The long-term opportunity is to build Africa's leading adaptive food intelligence platform. The company's defensibility will come from localized meal data, behavioral learning, nutrition intelligence, and culturally contextual recommendation systems.
+
+# **14\. Inspiration from Mealie (Open Source Reference)**
+
+Key features adapted from [Mealie](https://github.com/mealie-recipes/mealie) (12k+ GitHub stars):
+
+| Mealie Feature | Our Adaptation | Differentiation |
+|---------------|----------------|----------------|
+| URL Recipe Scraper | Schema.org/JSON-LD recipe import | Built into NestJS/TypeScript stack |
+| Shopping List | Ingredient consolidation with household scaling | Cost calculation in RWF |
+| Weekly Meal Calendar | Day-slot planner (Breakfast/Lunch/Dinner) | AI-generated from recommendation engine |
+| OpenAI Image Import | GPT-4o vision recipe parsing | Also supports video transcription |
+| Categories & Tags | Cuisine types, complexity, dietary labels | Rwandan-specific taxonomy |
+| Groups/Households | Household context for recommendation scaling | Integrated into scoring formula |
+
+Mealie focuses on **recipe storage and management** (self-hosted, Python/Vue). Our platform focuses on **AI-driven personalized recommendations** (cloud SaaS, TypeScript/NestJS/Next.js/Expo). The adapted features serve as supporting infrastructure for the core recommendation experience rather than the primary value proposition.

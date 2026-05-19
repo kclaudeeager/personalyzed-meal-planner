@@ -11,11 +11,15 @@ import {
   MessageSquare,
   Settings,
   ChefHat,
+  Calendar,
+  ShoppingCart,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Meals', href: '/meals', icon: Utensils },
+  { name: 'Meal Planner', href: '/meal-planner', icon: Calendar },
+  { name: 'Shopping List', href: '/shopping-list', icon: ShoppingCart },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
   { name: 'Feedback', href: '/feedback', icon: MessageSquare },
