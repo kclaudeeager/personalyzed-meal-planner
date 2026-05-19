@@ -16,6 +16,7 @@ import {
   CreateMealDto, UpdateMealDto, MealQueryDto,
   GenerateShoppingListDto, ImportRecipeDto, AddVideoDto,
   ParseImageDto, ParseVideoDto, TranslateRecipeDto,
+  AddImageUrlsDto,
 } from './meals.dto';
 import { OpenAiRecipeParserService } from './openai-recipe-parser.service';
 
@@ -117,6 +118,15 @@ export class MealsController {
   async deleteImage(@Param('imageId') imageId: string) {
     const result = await this.mealsService.deleteImage(imageId);
     return { success: true, ...result };
+  }
+
+  @Post(':id/image-urls')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add image URLs to a meal (as MealImage records)' })
+  async addImageUrls(@Param('id') id: string, @Body() dto: AddImageUrlsDto) {
+    const images = await this.mealsService.addImageUrls(id, dto.urls);
+    return { success: true, data: images };
   }
 
   @Post(':id/media')

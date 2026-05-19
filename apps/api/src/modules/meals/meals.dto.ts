@@ -221,3 +221,10 @@ export class TranslateRecipeDto {
   @IsString()
   targetLanguage?: string;
 }
+
+export class AddImageUrlsDto {
+  @ApiProperty({ example: ['https://example.com/meal-1.jpg', 'https://example.com/meal-2.jpg'] })
+  @IsArray()
+  @IsString({ each: true })
+  urls!: string[];
+}

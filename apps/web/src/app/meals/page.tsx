@@ -32,15 +32,12 @@ export default function MealsPage(): React.JSX.Element {
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [userId, setUserId] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [videoTitle, setVideoTitle] = useState('');
-  const [videoSource, setVideoSource] = useState('YOUTUBE');
-  const [videoCreatorName, setVideoCreatorName] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [extraImageUrls, setExtraImageUrls] = useState<string[]>(['']);
+  const [videoEntries, setVideoEntries] = useState<Array<{ tempId: string; url: string; source: string; title: string; creatorName: string }>>([]);
+  const [newVideo, setNewVideo] = useState({ url: '', source: 'YOUTUBE', title: '', creatorName: '' });
   const [createdMealId, setCreatedMealId] = useState<string | null>(null);
-  const [postCreateUploading, setPostCreateUploading] = useState(false);
-  const [postCreateAddingVideo, setPostCreateAddingVideo] = useState(false);
   const [postCreateMessage, setPostCreateMessage] = useState('');
   const [form, setForm] = useState({
     title: '',
@@ -72,12 +69,11 @@ export default function MealsPage(): React.JSX.Element {
 
   function resetForm() {
     setForm({ title: '', description: '', preparationTime: '', estimatedCost: '', calories: '', cuisineType: 'RWANDAN', complexity: 'MEDIUM', tags: '', imageUrl: '' });
-    setImageFile(null);
-    setImagePreview('');
-    setVideoUrl('');
-    setVideoTitle('');
-    setVideoSource('YOUTUBE');
-    setVideoCreatorName('');
+    setImageFiles([]);
+    setImagePreviews([]);
+    setExtraImageUrls(['']);
+    setVideoEntries([]);
+    setNewVideo({ url: '', source: 'YOUTUBE', title: '', creatorName: '' });
     setCreatedMealId(null);
     setPostCreateMessage('');
   }
@@ -109,28 +105,49 @@ export default function MealsPage(): React.JSX.Element {
         setCreatedMealId(newId);
         fetchMeals();
 
-        if (imageFile) {
-          setPostCreateUploading(true);
+        const uploads: Promise<unknown>[] = [];
+
+        if (imageFiles.length > 0) {
           const fd = new FormData();
-          fd.append('file', imageFile);
-          await fetch(`${API_BASE}/meals/${newId}/media`, {
-            method: 'POST',
-            headers: { 'x-user-id': userId },
-            body: fd,
-          });
-          setPostCreateUploading(false);
+          imageFiles.forEach((f) => fd.append('files', f));
+          uploads.push(
+            fetch(`${API_BASE}/meals/${newId}/images`, {
+              method: 'POST',
+              headers: { 'x-user-id': userId },
+              body: fd,
+            }),
+          );
         }
 
-        if (videoUrl && videoTitle) {
-          setPostCreateAddingVideo(true);
-          await fetch(`${API_BASE}/meals/${newId}/videos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-            body: JSON.stringify({ url: videoUrl, source: videoSource, title: videoTitle, creatorName: videoCreatorName || undefined }),
-          });
-          setPostCreateAddingVideo(false);
+        const validUrls = extraImageUrls.filter((u) => u.trim());
+        if (validUrls.length > 0) {
+          uploads.push(
+            fetch(`${API_BASE}/meals/${newId}/image-urls`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+              body: JSON.stringify({ urls: validUrls }),
+            }),
+          );
         }
 
+        if (videoEntries.length > 0) {
+          uploads.push(
+            fetch(`${API_BASE}/meals/${newId}/videos`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+              body: JSON.stringify(
+                videoEntries.map((v) => ({
+                  url: v.url,
+                  source: v.source,
+                  title: v.title,
+                  creatorName: v.creatorName || undefined,
+                })),
+              ),
+            }),
+          );
+        }
+
+        await Promise.all(uploads);
         setPostCreateMessage('Meal created successfully!');
       } else {
         setPostCreateMessage(`Error: ${json.message ?? 'Failed to create'}`);
@@ -329,30 +346,71 @@ export default function MealsPage(): React.JSX.Element {
               {/* Image Section */}
               <div className="border-t border-surface-800/50 pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-surface-200/60 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
-                  <ImageIcon className="h-4 w-4" /> Meal Image
+                  <ImageIcon className="h-4 w-4" /> Images
                 </h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-surface-200/40 mb-1">Upload image</label>
-                    <label className="flex items-center gap-2 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm cursor-pointer hover:border-primary-500/50 transition-colors">
-                      <ImageIcon className="h-4 w-4 text-surface-400" />
-                      <span className="text-surface-200/60">{imageFile ? imageFile.name : 'Choose file'}</span>
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
-                        }} />
-                    </label>
-                    {imagePreview && (
-                      <img src={imagePreview} alt="preview" className="mt-2 h-24 rounded-lg object-cover" />
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-surface-200/40 mb-1">Or paste image URL</label>
+                    <label className="block text-xs text-surface-200/40 mb-1">Primary image URL (thumbnail)</label>
                     <input type="url" value={form.imageUrl}
                       onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
                       placeholder="https://example.com/meal.jpg"
                       className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500" />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm cursor-pointer hover:border-primary-500/50 transition-colors">
+                      <ImageIcon className="h-4 w-4 text-surface-400" />
+                      <span className="text-surface-200/60">{imageFiles.length > 0 ? `${imageFiles.length} file(s) selected` : 'Upload multiple images'}</span>
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setImageFiles((prev) => [...prev, ...files]);
+                          setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+                        }} />
+                    </label>
+                    {imagePreviews.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {imagePreviews.map((preview, i) => (
+                          <div key={i} className="relative inline-block">
+                            <img src={preview} alt="" className="h-20 w-20 rounded-lg object-cover" />
+                            <button type="button" onClick={() => {
+                              setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
+                            }}
+                              className="absolute -top-1.5 -right-1.5 rounded-full bg-red-500 p-0.5 text-white">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-surface-200/40 mb-1">Additional image URLs</label>
+                    {extraImageUrls.map((url, i) => (
+                      <div key={i} className="flex items-center gap-2 mb-2">
+                        <input type="url" value={url}
+                          onChange={(e) => {
+                            const next = [...extraImageUrls];
+                            next[i] = e.target.value;
+                            setExtraImageUrls(next);
+                          }}
+                          placeholder="https://example.com/gallery-1.jpg"
+                          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+                        {extraImageUrls.length > 1 && (
+                          <button type="button" onClick={() => setExtraImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="rounded-full bg-red-500/20 p-1.5 text-red-400 hover:bg-red-500/30">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setExtraImageUrls((prev) => [...prev, ''])}
+                      className="text-xs text-primary-400 hover:text-primary-300 mt-1">
+                      + Add another URL
+                    </button>
                   </div>
                 </div>
               </div>
@@ -360,28 +418,46 @@ export default function MealsPage(): React.JSX.Element {
               {/* Video Section */}
               <div className="border-t border-surface-800/50 pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-surface-200/60 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
-                  <Video className="h-4 w-4" /> Preparation Video Link (optional)
+                  <Video className="h-4 w-4" /> Preparation Videos
                 </h3>
+
+                {videoEntries.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {videoEntries.map((v) => (
+                      <div key={v.tempId} className="flex items-center justify-between rounded-lg bg-surface-900/50 border border-surface-800 px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{v.title}</p>
+                          <p className="text-xs text-surface-200/40 truncate">{v.url} · {v.source}</p>
+                        </div>
+                        <button type="button" onClick={() => setVideoEntries((prev) => prev.filter((e) => e.tempId !== v.tempId))}
+                          className="ml-2 rounded-full bg-red-500/20 p-1 text-red-400 hover:bg-red-500/30">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <label className="block text-xs text-surface-200/40 mb-1">Video URL</label>
-                    <input type="url" value={videoUrl}
-                      onChange={(e) => setVideoUrl(e.target.value)}
+                    <input type="url" value={newVideo.url}
+                      onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500" />
+                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs text-surface-200/40 mb-1">Title</label>
-                    <input type="text" value={videoTitle}
-                      onChange={(e) => setVideoTitle(e.target.value)}
+                    <input type="text" value={newVideo.title}
+                      onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
                       placeholder="How to cook this meal"
-                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500" />
+                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs text-surface-200/40 mb-1">Source</label>
-                    <select value={videoSource}
-                      onChange={(e) => setVideoSource(e.target.value)}
-                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500">
+                    <select value={newVideo.source}
+                      onChange={(e) => setNewVideo({ ...newVideo, source: e.target.value })}
+                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500">
                       <option value="YOUTUBE">YouTube</option>
                       <option value="TIKTOK">TikTok</option>
                       <option value="ORIGINAL">Original</option>
@@ -389,10 +465,21 @@ export default function MealsPage(): React.JSX.Element {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs text-surface-200/40 mb-1">Creator (optional)</label>
-                    <input type="text" value={videoCreatorName}
-                      onChange={(e) => setVideoCreatorName(e.target.value)}
-                      placeholder="Cooking Channel Name"
-                      className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500" />
+                    <div className="flex items-center gap-2">
+                      <input type="text" value={newVideo.creatorName}
+                        onChange={(e) => setNewVideo({ ...newVideo, creatorName: e.target.value })}
+                        placeholder="Cooking Channel Name"
+                        className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+                      <button type="button" onClick={() => {
+                        if (!newVideo.url || !newVideo.title) return;
+                        setVideoEntries((prev) => [...prev, { ...newVideo, tempId: Date.now().toString() }]);
+                        setNewVideo({ url: '', source: 'YOUTUBE', title: '', creatorName: '' });
+                      }}
+                        className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50"
+                        disabled={!newVideo.url || !newVideo.title}>
+                        Add
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

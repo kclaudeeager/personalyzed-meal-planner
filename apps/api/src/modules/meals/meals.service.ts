@@ -143,6 +143,19 @@ export class MealsService {
     });
   }
 
+  async addImageUrls(mealId: string, urls: string[]) {
+    const meal = await this.prisma.meal.findUnique({ where: { id: mealId } });
+    if (!meal) throw new NotFoundException('Meal not found');
+
+    const records = urls.map((url) => ({ mealId, url }));
+    await this.prisma.mealImage.createMany({ data: records });
+
+    return this.prisma.mealImage.findMany({
+      where: { mealId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async deleteImage(imageId: string) {
     const image = await this.prisma.mealImage.findUnique({ where: { id: imageId } });
     if (!image) throw new NotFoundException('Image not found');
