@@ -1,6 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+export interface MealSuggestion {
+  dayOfWeek: number;
+  mealType: string;
+  suggestions: Array<{
+    meal: Record<string, unknown>;
+    reason: string;
+  }>;
+}
+
 @Injectable()
 export class MealPlansService {
   constructor(private readonly prisma: PrismaService) {}
@@ -13,9 +22,15 @@ export class MealPlansService {
 
     const existing = await this.prisma.mealPlan.findUnique({
       where: { userId_weekStart: { userId, weekStart: start } },
+      include: {
+        entries: {
+          include: { meal: true },
+          orderBy: [{ dayOfWeek: 'asc' }, { mealType: 'asc' }, { sortOrder: 'asc' }],
+        },
+      },
     });
     if (existing) {
-      throw new BadRequestException('Meal plan already exists for this week');
+      return existing;
     }
 
     return this.prisma.mealPlan.create({
@@ -65,18 +80,20 @@ export class MealPlansService {
   }
 
   async setEntry(mealPlanId: string, mealId: string, mealType: string, dayOfWeek: number) {
-    const plan = await this.findById(mealPlanId);
+    const plan = await this.prisma.mealPlan.findUnique({ where: { id: mealPlanId } });
+    if (!plan) throw new NotFoundException('Meal plan not found');
+
     const meal = await this.prisma.meal.findUnique({ where: { id: mealId } });
     if (!meal) throw new NotFoundException('Meal not found');
 
-    const existingIndex = plan.entries.findIndex(
-      (e: { dayOfWeek: number; mealType: string }) => e.dayOfWeek === dayOfWeek && e.mealType === mealType,
-    );
+    // Direct query for existing entry instead of iterating
+    const existing = await this.prisma.mealPlanEntry.findFirst({
+      where: { mealPlanId, mealType: mealType as any, dayOfWeek },
+    });
 
-    if (existingIndex >= 0) {
-      const existingId = plan.entries[existingIndex].id;
+    if (existing) {
       return this.prisma.mealPlanEntry.update({
-        where: { id: existingId },
+        where: { id: existing.id },
         data: { mealId },
         include: { meal: true },
       });
@@ -104,6 +121,26 @@ export class MealPlansService {
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
 
+    // Get or create meal plan for this week
+    let plan = await this.prisma.mealPlan.findUnique({
+      where: { userId_weekStart: { userId, weekStart: start } },
+    });
+
+    if (plan) {
+      // Delete existing entries to regenerate
+      await this.prisma.mealPlanEntry.deleteMany({ where: { mealPlanId: plan.id } });
+    } else {
+      plan = await this.prisma.mealPlan.create({
+        data: {
+          userId,
+          weekStart: start,
+          weekEnd: end,
+          name: 'AI-Generated Meal Plan',
+        },
+      });
+    }
+
+    // Try to get recommendations first
     const latestRecs = await this.prisma.recommendation.findMany({
       where: {
         userId,
@@ -113,34 +150,117 @@ export class MealPlansService {
       orderBy: { recommendationScore: 'desc' },
     });
 
-    if (latestRecs.length === 0) {
-      throw new BadRequestException('No recommendations found for this week. Generate daily recommendations first.');
-    }
-
-    const plan = await this.create(userId, weekStart, 'AI-Generated Meal Plan');
+    // Fallback: use all approved meals if no recommendations
+    const allMeals = latestRecs.length > 0
+      ? latestRecs.map((r) => r.meal)
+      : await this.prisma.meal.findMany({
+          where: { validationStatus: 'APPROVED' },
+        });
 
     const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER'] as const;
+    const usedMealIds = new Set<string>();
+
     for (let day = 0; day < 7; day++) {
       for (const mealType of mealTypes) {
-        const rec = latestRecs.find(
-          (r: { mealType: string; mealId: string }) => r.mealType === mealType && !plan.entries.some(
-            (e: { mealId: string; dayOfWeek: number; mealType: string }) => e.mealId === r.mealId && e.dayOfWeek === day && e.mealType === mealType,
-          ),
-        );
-        if (rec) {
-          await this.prisma.mealPlanEntry.create({
-            data: {
-              mealPlanId: plan.id,
-              mealId: rec.mealId,
-              mealType,
-              dayOfWeek: day,
-              sortOrder: 0,
-            },
-          });
-        }
+        // Find meals matching this meal type
+        const candidates = allMeals.filter((m) => {
+          if (usedMealIds.has(m.id)) return false;
+          const types = (m as any).mealTypes as string[] | undefined;
+          if (types && types.length > 0 && !types.includes(mealType)) return false;
+          return true;
+        });
+
+        // If no type-filtered meals, allow any meal of any type
+        const pool = candidates.length > 0 ? candidates : allMeals.filter((m) => !usedMealIds.has(m.id));
+        if (pool.length === 0) continue;
+
+        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        usedMealIds.add(chosen.id);
+
+        await this.prisma.mealPlanEntry.create({
+          data: {
+            mealPlanId: plan.id,
+            mealId: chosen.id,
+            mealType,
+            dayOfWeek: day,
+            sortOrder: 0,
+          },
+        });
       }
     }
 
     return this.findById(plan.id);
+  }
+
+  async suggestMeals(userId: string, weekStart: string) {
+    const start = new Date(weekStart);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+
+    const plan = await this.prisma.mealPlan.findUnique({
+      where: { userId_weekStart: { userId, weekStart: start } },
+      include: {
+        entries: {
+          include: { meal: { include: { ingredients: { include: { ingredient: true } } } } },
+        },
+      },
+    });
+
+    const allMeals = await this.prisma.meal.findMany({
+      include: {
+        ingredients: { include: { ingredient: true } },
+      },
+    });
+
+    const plannedMealIds = new Set(plan?.entries.map((e: { mealId: string }) => e.mealId) ?? []);
+    const plannedIngredientIds = new Set<string>();
+    for (const entry of plan?.entries ?? []) {
+      for (const mi of entry.meal.ingredients) {
+        plannedIngredientIds.add(mi.ingredientId);
+      }
+    }
+
+    const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER'] as const;
+    const suggestions: MealSuggestion[] = [];
+
+    for (let day = 0; day < 7; day++) {
+      for (const mealType of mealTypes) {
+        const existingEntry = plan?.entries.find(
+          (e: { dayOfWeek: number; mealType: string }) => e.dayOfWeek === day && e.mealType === mealType,
+        );
+        if (existingEntry) continue;
+
+        const candidates = allMeals
+          .filter((m: Record<string, unknown>) => {
+            if (plannedMealIds.has(m.id as string)) return false;
+            const types = m.mealTypes as string[];
+            if (types && types.length > 0 && !types.includes(mealType)) return false;
+            return true;
+          })
+          .map((m: Record<string, unknown>) => {
+            const mealIngredients = (m as any).ingredients as Array<{ ingredientId: string }>;
+            const overlapCount = mealIngredients.filter(
+              (mi: { ingredientId: string }) => plannedIngredientIds.has(mi.ingredientId),
+            ).length;
+            return { meal: m, overlapCount };
+          })
+          .sort((a: { overlapCount: number }, b: { overlapCount: number }) => b.overlapCount - a.overlapCount)
+          .slice(0, 5);
+
+        suggestions.push({
+          dayOfWeek: day,
+          mealType,
+          suggestions: candidates.map((c: { meal: Record<string, unknown>; overlapCount: number }) => ({
+            meal: c.meal,
+            reason: c.overlapCount > 0
+              ? `Shares ${c.overlapCount} ingredient(s) with planned meals`
+              : 'Variety pick — no overlap with current week',
+          })),
+        });
+      }
+    }
+
+    return suggestions;
   }
 }

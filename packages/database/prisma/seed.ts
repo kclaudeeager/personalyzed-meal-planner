@@ -5,14 +5,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Check if data already exists (idempotent)
-  const existingUsers = await prisma.user.count();
-  if (existingUsers > 0) {
-    console.log(`  ✅ Database already has data (${existingUsers} user(s)) — skipping`);
-    return;
-  }
+  // Check if main seed data already exists (idempotent)
+  const existingMainData = await prisma.ingredient.count();
+  const hasMainData = existingMainData > 0;
 
   // ── Ingredients ───────────────────────────────────────────────
+  if (hasMainData) {
+    console.log(`  ✅ Main seed data already exists — skipping ingredients, meals, plans`);
+  } else {
   const ingredients = await Promise.all([
     prisma.ingredient.create({ data: { name: 'Irish Potatoes', localAvailability: 'COMMON', averageCost: 500 } }),
     prisma.ingredient.create({ data: { name: 'Sweet Potatoes', localAvailability: 'COMMON', averageCost: 400 } }),
@@ -58,6 +58,7 @@ async function main() {
   const meals = {
     breakfast1: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Ugali with Sukuma Wiki',
         description: 'Traditional maize flour porridge served with sautéed collard greens. A hearty breakfast staple across East Africa.',
         preparationTime: 20,
@@ -65,11 +66,12 @@ async function main() {
         calories: 420,
         cuisineType: 'RWANDAN',
         complexity: 'EASY',
-        tags: ['breakfast', 'traditional', 'vegan-friendly', 'staple'],
-      },
-    }),
+          tags: ['breakfast', 'traditional', 'vegan-friendly', 'staple'],
+        },
+      }),
     breakfast2: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Millet Porridge (Uburo)',
         description: 'Warm and nourishing millet porridge made with milk and a touch of sugar. A traditional Rwandan breakfast that provides lasting energy.',
         preparationTime: 15,
@@ -82,6 +84,7 @@ async function main() {
     }),
     breakfast3: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Tea with Milk and Chapati',
         description: 'Rich Rwandan milk tea served with soft, layered chapati bread. A popular breakfast combination in Kigali households.',
         preparationTime: 30,
@@ -94,6 +97,7 @@ async function main() {
     }),
     lunch1: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Ibihaza (Pumpkin Beans)',
         description: 'Mashed pumpkin mixed with boiled beans, sautéed with onions and tomatoes. A beloved Rwandan comfort food rich in fiber and vitamins.',
         preparationTime: 45,
@@ -106,6 +110,7 @@ async function main() {
     }),
     lunch2: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Isombe with Rice',
         description: 'Cassava leaves pounded and cooked with eggplant, spinach, and ground peanuts, served over steamed rice. A classic Rwandan lunch.',
         preparationTime: 60,
@@ -118,6 +123,7 @@ async function main() {
     }),
     lunch3: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Brochettes with Plantains',
         description: 'Grilled skewers of marinated beef or goat meat served with fried plantains and a side of pili-pili sauce. A popular street food turned home lunch.',
         preparationTime: 50,
@@ -130,6 +136,7 @@ async function main() {
     }),
     dinner1: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Mizuzu (Fried Goat) with Chips',
         description: 'Crispy fried goat meat served with Rwandan-style french fries and a fresh tomato-onion salsa. A favorite weekend dinner.',
         preparationTime: 55,
@@ -142,6 +149,7 @@ async function main() {
     }),
     dinner2: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Fish in Coconut Sauce (Sambaza)',
         description: 'Lake Kivu sambaza (small fish) simmered in a rich coconut milk sauce with tomatoes, onions, and local spices. Served with steamed rice.',
         preparationTime: 40,
@@ -154,6 +162,7 @@ async function main() {
     }),
     dinner3: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Rwandan Chicken Stew',
         description: 'Slow-cooked chicken in a tomato and onion base with garlic, ginger, and local herbs. Served with boiled Irish potatoes and steamed amaranth.',
         preparationTime: 70,
@@ -166,6 +175,7 @@ async function main() {
     }),
     snack1: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Samosas with Chili Sauce',
         description: 'Crispy fried pastries filled with spiced ground beef and vegetables. Served with a tangy chili dipping sauce.',
         preparationTime: 35,
@@ -178,6 +188,7 @@ async function main() {
     }),
     snack2: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Fresh Fruit Bowl',
         description: 'Seasonal Rwandan fruits — mango, pineapple, banana, and avocado — drizzled with local honey and lime.',
         preparationTime: 10,
@@ -190,6 +201,7 @@ async function main() {
     }),
     snack3: await prisma.meal.create({
       data: {
+        validationStatus: 'APPROVED',
         title: 'Mandazi (East African Donuts)',
         description: 'Lightly sweetened fried dough, slightly spiced with cardamom and coconut milk. A popular tea-time snack across Rwanda.',
         preparationTime: 40,
@@ -477,6 +489,30 @@ async function main() {
     }),
   ]);
   console.log('  ✅ Sample feedback created');
+  } // end of if (!hasMainData)
+
+  // ── Meal Creator Account ───────────────────────────────────────
+  const existingCreator = await prisma.user.findUnique({ where: { clerkId: 'meal-creator-001' } });
+  if (!existingCreator) {
+    await prisma.user.create({
+      data: {
+        clerkId: 'meal-creator-001',
+        email: 'creator@meal-platform.rw',
+        fullName: 'Meal Creator',
+        ageRange: 'AGE_26_35',
+        gender: 'OTHER',
+        householdSize: 1,
+        budgetLevel: 'MEDIUM',
+        activityLevel: 'MODERATE',
+        cookingSkill: 'ADVANCED',
+        dietaryPreferences: ['local', 'traditional', 'international'],
+        allergies: [],
+      },
+    });
+    console.log('  ✅ Meal creator account created (clerkId: meal-creator-001)');
+  } else {
+    console.log('  ✅ Meal creator account already exists');
+  }
 
   console.log('\n🎉 Seeding complete!');
 }

@@ -80,3 +80,9 @@ export enum LocalAvailability {
   RARE = 'RARE',
   IMPORTED = 'IMPORTED',
 }
+
+export enum ValidationStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

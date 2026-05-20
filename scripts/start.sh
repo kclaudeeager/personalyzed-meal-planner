@@ -42,7 +42,7 @@ DATABASE_URL="postgresql://mealplan:mealplan_dev@localhost:5433/adaptive_meals?s
 echo ""
 echo "🌐 Starting API server on http://localhost:4000 ..."
 cd apps/api
-node dist/main.js > /tmp/meal-api.log 2>&1 &
+DATABASE_URL="postgresql://mealplan:mealplan_dev@localhost:5433/adaptive_meals?schema=public" node dist/main.js > /tmp/meal-api.log 2>&1 &
 API_PID=$!
 cd "$PROJECT_DIR"
 

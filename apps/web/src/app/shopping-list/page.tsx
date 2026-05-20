@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Loader2, CheckCircle2, Circle, FileDown, Sparkles } from 'lucide-react';
-
+import { useUserId } from '@/hooks/use-user';
 import { API_BASE } from '@/lib/api';
 
 interface ShoppingListItem {
@@ -31,7 +31,7 @@ interface MealPlan {
 }
 
 export default function ShoppingListPage(): React.JSX.Element {
-  const [userId, setUserId] = useState('');
+  const { userId, isSignedIn } = useUserId();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +80,6 @@ export default function ShoppingListPage(): React.JSX.Element {
         setSelectedPlanId('');
       }
     } catch {
-      // error
     } finally {
       setGenerating(false);
     }
@@ -95,7 +94,6 @@ export default function ShoppingListPage(): React.JSX.Element {
       });
       fetchLists();
     } catch {
-      // error
     }
   }
 
@@ -112,7 +110,6 @@ export default function ShoppingListPage(): React.JSX.Element {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // error
     }
   }
 
@@ -125,15 +122,11 @@ export default function ShoppingListPage(): React.JSX.Element {
         <p className="mt-1 text-surface-200/60">Generate and manage shopping lists from meal plans</p>
       </div>
 
-      <div className="glass-dark rounded-2xl p-4 flex items-center gap-3">
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Enter user ID"
-          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-        />
-      </div>
+      {!isSignedIn && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-400">
+          Sign in to manage shopping lists.
+        </div>
+      )}
 
       {userId && (
         <>

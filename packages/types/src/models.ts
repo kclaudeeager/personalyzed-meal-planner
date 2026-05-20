@@ -19,6 +19,7 @@ import type {
   Gender,
   LocalAvailability,
   MealType,
+  ValidationStatus,
   VideoSource,
 } from './enums';
 
@@ -57,9 +58,23 @@ export interface Meal {
   cuisineType: CuisineType;
   complexity: Complexity;
   tags: string[];
+  mealTypes: MealType[];
+  accompaniments: string | null;
+  notes: string | null;
   imageUrl: string | null;
+  createdById: string | null;
+  validationStatus: ValidationStatus;
+  validatedById: string | null;
+  validationComment: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface RecipeStep {
+  id: string;
+  mealId: string;
+  stepNumber: number;
+  instruction: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -94,6 +94,12 @@ enum LocalAvailability {
   IMPORTED
 }
 
+enum ValidationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -120,6 +126,8 @@ model User {
   healthMetrics       HealthMetric[]
   mealPlans           MealPlan[]
   shoppingLists       ShoppingList[]
+  createdMeals        Meal[]         @relation("MealCreator")
+  validatedMeals      Meal[]         @relation("MealValidator")
 
   @@map("users")
 }
@@ -134,13 +142,23 @@ model Meal {
   cuisineType       CuisineType     @default(RWANDAN)
   complexity        Complexity      @default(MEDIUM)
   tags              String[]        @default([])
+  mealTypes         MealType[]      @default([])
+  accompaniments    String?
+  notes             String?
   imageUrl          String?
+  createdById       String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  createdBy         User?           @relation("MealCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  validationStatus  ValidationStatus @default(PENDING)
+  validatedById     String?
+  validationComment String?
+  validatedBy       User?           @relation("MealValidator", fields: [validatedById], references: [id], onDelete: SetNull)
   images            MealImage[]
   ingredients       MealIngredient[]
   nutritionProfile  NutritionProfile?
+  steps             RecipeStep[]
   videos            VideoReference[]
   recommendations   Recommendation[]
   feedback          Feedback[]
@@ -184,6 +202,17 @@ model MealIngredient {
 
   @@unique([mealId, ingredientId])
   @@map("meal_ingredients")
+}
+
+model RecipeStep {
+  id          String @id @default(cuid())
+  mealId      String
+  stepNumber  Int
+  instruction String
+
+  meal        Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_steps")
 }
 
 model NutritionProfile {

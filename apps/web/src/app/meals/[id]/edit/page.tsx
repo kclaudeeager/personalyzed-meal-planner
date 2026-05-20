@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { ArrowLeft, Save, Loader2, Video, ExternalLink, Image as ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Video, ExternalLink, Image as ImageIcon, X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { API_BASE, API_HOST } from '@/lib/api';
+import { useUserId } from '@/hooks/use-user';
 
 interface VideoLink {
   url: string;
@@ -12,9 +13,21 @@ interface VideoLink {
   creatorName: string;
 }
 
+interface Step {
+  id?: string;
+  stepNumber: number;
+  instruction: string;
+}
+
+const MEAL_TYPE_OPTIONS = [
+  { value: 'BREAKFAST', label: 'Breakfast' },
+  { value: 'LUNCH', label: 'Lunch' },
+  { value: 'DINNER', label: 'Dinner' },
+];
+
 export default function EditMealPage({ params }: { params: Promise<{ id: string }> }): React.JSX.Element {
   const { id } = use(params);
-  const [userId, setUserId] = useState('');
+  const { userId } = useUserId();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,7 +45,12 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
     complexity: 'MEDIUM',
     tags: '',
     imageUrl: '',
+    accompaniments: '',
+    notes: '',
   });
+
+  const [mealTypes, setMealTypes] = useState<string[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
 
   useEffect(() => {
     fetchMeal();
@@ -55,13 +73,35 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
           complexity: meal.complexity,
           tags: (meal.tags ?? []).join(', '),
           imageUrl: meal.imageUrl ?? '',
+          accompaniments: meal.accompaniments ?? '',
+          notes: meal.notes ?? '',
         });
+        setMealTypes(meal.mealTypes ?? []);
+        setSteps(meal.steps ?? []);
       }
     } catch {
       setMessage('Failed to load meal');
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleMealType(type: string) {
+    setMealTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  }
+
+  function addStep() {
+    setSteps((prev) => [...prev, { stepNumber: prev.length + 1, instruction: '' }]);
+  }
+
+  function removeStep(idx: number) {
+    setSteps((prev) => prev.filter((_, i) => i !== idx).map((s, i) => ({ ...s, stepNumber: i + 1 })));
+  }
+
+  function updateStep(idx: number, instruction: string) {
+    setSteps((prev) => prev.map((s, i) => i === idx ? { ...s, instruction } : s));
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -82,6 +122,9 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
           cuisineType: form.cuisineType,
           complexity: form.complexity,
           tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+          mealTypes: mealTypes.length > 0 ? mealTypes : undefined,
+          accompaniments: form.accompaniments || undefined,
+          notes: form.notes || undefined,
           imageUrl: form.imageUrl || undefined,
         }),
       });
@@ -169,15 +212,11 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
         Edit Meal
       </h1>
 
-      <div className="glass-dark rounded-2xl p-4 flex items-center gap-3">
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Your user ID (for authorization)"
-          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-        />
-      </div>
+      {!userId && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-400">
+          Sign in to edit meals.
+        </div>
+      )}
 
       {message && (
         <div className="rounded-xl bg-surface-800/50 border border-surface-700 px-4 py-3 text-sm">
@@ -200,6 +239,25 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={3}
               className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-surface-200/60 mb-1">Meal Times</label>
+            <div className="flex flex-wrap gap-2">
+              {MEAL_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleMealType(opt.value)}
+                  className={`rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                    mealTypes.includes(opt.value)
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-surface-900/50 border border-surface-800 text-surface-200/60 hover:border-primary-500/50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-surface-200/60 mb-1">Prep Time (min)</label>
@@ -235,7 +293,54 @@ export default function EditMealPage({ params }: { params: Promise<{ id: string 
               onChange={(e) => setForm({ ...form, tags: e.target.value })}
               className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
           </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-surface-200/60 mb-1">Accompaniments</label>
+            <textarea value={form.accompaniments}
+              onChange={(e) => setForm({ ...form, accompaniments: e.target.value })}
+              rows={2}
+              placeholder="Serve with rice, plantains, salad, or ugali..."
+              className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-surface-200/60 mb-1">Notes</label>
+            <textarea value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={3}
+              placeholder="Any extra tips, substitutions, or notes..."
+              className="w-full rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+          </div>
         </div>
+
+        {/* Steps */}
+        {steps.length > 0 && (
+          <div className="border-t border-surface-800/50 pt-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-surface-200/60 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+              <ArrowRight className="h-4 w-4" /> Steps
+            </h3>
+            <div className="space-y-2">
+              {steps.map((step, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-500/15 text-xs font-bold text-primary-400 shrink-0">
+                    {idx + 1}
+                  </div>
+                  <input type="text" value={step.instruction}
+                    onChange={(e) => updateStep(idx, e.target.value)}
+                    placeholder={`Step ${idx + 1} instruction`}
+                    className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500" />
+                  <button type="button" onClick={() => removeStep(idx)}
+                    className="rounded-full bg-red-500/20 p-1.5 text-red-400 hover:bg-red-500/30">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addStep}
+              className="mt-2 text-xs text-primary-400 hover:text-primary-300">
+              + Add Step
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-end">
           <button type="submit" disabled={saving}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 px-6 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50">

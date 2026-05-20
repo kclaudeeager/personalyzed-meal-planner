@@ -12,6 +12,12 @@ export class CreateMealPlanDto {
   name?: string;
 }
 
+export class SuggestMealsDto {
+  @ApiProperty({ example: '2026-05-18T00:00:00.000Z' })
+  @IsString()
+  weekStart!: string;
+}
+
 export class SetMealPlanEntryDto {
   @ApiProperty()
   @IsString()

@@ -3,10 +3,12 @@
 import { useState, useEffect, use } from 'react';
 import {
   ArrowLeft, Clock, DollarSign, Flame, Utensils, Video, ExternalLink,
-  Loader2, Pencil, Trash2, ChefHat, BarChart3,
+  Loader2, Pencil, ChefHat, BarChart3, ArrowRight, User, CheckCircle2,
+  XCircle, Clock as ClockIcon, ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { API_BASE, API_HOST } from '@/lib/api';
+import { useUserId } from '@/hooks/use-user';
 
 interface Ingredient {
   id: string;
@@ -23,12 +25,24 @@ interface Nutrition {
   vitamins: string | null;
 }
 
+interface Step {
+  id: string;
+  stepNumber: number;
+  instruction: string;
+}
+
 interface Video {
   id: string;
   url: string;
   source: string;
   title: string;
   creatorName: string | null;
+}
+
+interface Creator {
+  id: string;
+  fullName: string;
+  email: string;
 }
 
 interface Meal {
@@ -41,12 +55,34 @@ interface Meal {
   cuisineType: string;
   complexity: string;
   tags: string[];
+  mealTypes: string[];
+  accompaniments: string | null;
+  notes: string | null;
   imageUrl: string | null;
+  createdBy: Creator | null;
+  validationStatus: string;
+  validatedBy: Creator | null;
+  validationComment: string | null;
   ingredients: Ingredient[];
   nutritionProfile: Nutrition | null;
+  steps: Step[];
   videos: Video[];
   _count: { feedback: number; recommendations: number };
 }
+
+const MEAL_TYPE_LABELS: Record<string, string> = {
+  BREAKFAST: 'Breakfast',
+  LUNCH: 'Lunch',
+  DINNER: 'Dinner',
+  SNACK: 'Snack',
+};
+
+const MEAL_TYPE_COLORS: Record<string, string> = {
+  BREAKFAST: 'bg-amber-500/15 text-amber-400',
+  LUNCH: 'bg-green-500/15 text-green-400',
+  DINNER: 'bg-indigo-500/15 text-indigo-400',
+  SNACK: 'bg-pink-500/15 text-pink-400',
+};
 
 function getVideoEmbedUrl(url: string): string | null {
   const youtubeMatch = url.match(
@@ -62,9 +98,11 @@ function getVideoEmbedUrl(url: string): string | null {
 
 export default function MealDetailPage({ params }: { params: Promise<{ id: string }> }): React.JSX.Element {
   const { id } = use(params);
+  const { userId } = useUserId();
   const [meal, setMeal] = useState<Meal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState('');
+  const [validating, setValidating] = useState(false);
+  const [validationComment, setValidationComment] = useState('');
 
   useEffect(() => {
     fetchMeal();
@@ -73,7 +111,7 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
   async function fetchMeal() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/meals/${id}`);
+      const res = await fetch(`${API_BASE}/meals/${id}?includePending=true`);
       const json = await res.json();
       setMeal(json.data ?? null);
     } catch {
@@ -83,11 +121,23 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  async function handleDeleteVideo(videoId: string) {
+  async function handleValidate(status: string) {
+    if (!userId) return;
+    setValidating(true);
     try {
-      await fetch(`${API_BASE}/meals/${id}/videos/${videoId}`, { method: 'DELETE' });
-      fetchMeal();
-    } catch {}
+      const res = await fetch(`${API_BASE}/meals/${id}/validate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ status, comment: validationComment || undefined }),
+      });
+      if (res.ok) {
+        setValidationComment('');
+        fetchMeal();
+      }
+    } catch {
+    } finally {
+      setValidating(false);
+    }
   }
 
   if (loading) {
@@ -153,6 +203,18 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
                   {meal.complexity}
                 </span>
               </div>
+
+              {/* Meal Types Badges */}
+              {meal.mealTypes && meal.mealTypes.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {meal.mealTypes.map((type) => (
+                    <span key={type} className={`rounded-full px-2.5 py-1 text-xs font-medium ${MEAL_TYPE_COLORS[type] ?? 'bg-surface-800/50 text-surface-200/40'}`}>
+                      {MEAL_TYPE_LABELS[type] ?? type}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <p className="text-surface-200/60 leading-relaxed">{meal.description}</p>
 
               <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-surface-200/40">
@@ -167,7 +229,14 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
                 </span>
               </div>
 
-              {meal.tags.length > 0 && (
+              {meal.createdBy && (
+                <div className="mt-3 flex items-center gap-2 text-xs text-surface-200/40">
+                  <User className="h-3 w-3" />
+                  <span>Created by {meal.createdBy.fullName}</span>
+                </div>
+              )}
+
+              {meal.tags && meal.tags.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {meal.tags.map((tag) => (
                     <span key={tag} className="rounded-full bg-surface-800/50 px-2.5 py-1 text-xs text-surface-200/50">
@@ -179,10 +248,57 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {meal.videos.length > 0 && (
+          {/* Steps Section */}
+          {meal.steps && meal.steps.length > 0 && (
             <div className="glass-dark rounded-2xl p-6">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
-                <Video className="h-5 w-5 text-primary-400" /> How to Prepare
+                <ArrowRight className="h-5 w-5 text-primary-400" /> How to Prepare
+              </h2>
+              <div className="space-y-3">
+                {meal.steps.map((step, idx) => (
+                  <div key={step.id}>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-500/15 text-sm font-bold text-primary-400">
+                        {step.stepNumber}
+                      </div>
+                      <p className="pt-1 text-sm leading-relaxed text-surface-200/80">{step.instruction}</p>
+                    </div>
+                    {idx < meal.steps.length - 1 && (
+                      <div className="ml-4 mt-1 flex items-center gap-2 text-surface-500">
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Accompaniments */}
+          {meal.accompaniments && (
+            <div className="glass-dark rounded-2xl p-6">
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+                <Utensils className="h-5 w-5 text-primary-400" /> Accompaniments
+              </h2>
+              <p className="text-sm text-surface-200/60">{meal.accompaniments}</p>
+            </div>
+          )}
+
+          {/* Notes */}
+          {meal.notes && (
+            <div className="glass-dark rounded-2xl p-6">
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+                <ChefHat className="h-5 w-5 text-primary-400" /> Notes
+              </h2>
+              <p className="text-sm text-surface-200/60">{meal.notes}</p>
+            </div>
+          )}
+
+          {/* Videos */}
+          {meal.videos && meal.videos.length > 0 && (
+            <div className="glass-dark rounded-2xl p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
+                <Video className="h-5 w-5 text-primary-400" /> Video Guides
               </h2>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {meal.videos.map((video) => {
@@ -235,7 +351,7 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
             <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
               <ChefHat className="h-5 w-5 text-primary-400" /> Ingredients
             </h2>
-            {meal.ingredients.length > 0 ? (
+            {meal.ingredients && meal.ingredients.length > 0 ? (
               <div className="space-y-2">
                 {meal.ingredients.map((mi) => (
                   <div key={mi.id} className="flex items-center justify-between rounded-lg bg-surface-900/50 px-3 py-2">
@@ -276,6 +392,75 @@ export default function MealDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
           )}
+
+          {/* Validation Status */}
+          <div className="glass-dark rounded-2xl p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-surface-200/60 uppercase tracking-wider">
+              <ShieldCheck className="h-4 w-4" /> Validation
+            </h2>
+            <div className="space-y-3">
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                meal.validationStatus === 'APPROVED' ? 'bg-green-500/15 text-green-400' :
+                meal.validationStatus === 'REJECTED' ? 'bg-red-500/15 text-red-400' :
+                'bg-amber-500/15 text-amber-400'
+              }`}>
+                {meal.validationStatus === 'APPROVED' ? <CheckCircle2 className="h-4 w-4" /> :
+                 meal.validationStatus === 'REJECTED' ? <XCircle className="h-4 w-4" /> :
+                 <ClockIcon className="h-4 w-4" />}
+                <span className="font-medium capitalize">{meal.validationStatus?.toLowerCase() ?? 'pending'}</span>
+              </div>
+
+              {meal.validatedBy && (
+                <p className="text-xs text-surface-200/40">
+                  Reviewed by {meal.validatedBy.fullName}
+                </p>
+              )}
+
+              {meal.validationComment && (
+                <div className="rounded-lg bg-surface-900/50 border border-surface-800 p-3">
+                  <p className="text-xs text-surface-200/40 mb-1">Validator comment:</p>
+                  <p className="text-sm text-surface-200/70">{meal.validationComment}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Validation Panel (for super chief) */}
+          <div className="glass-dark rounded-2xl p-5">
+            <h2 className="mb-3 text-sm font-semibold text-surface-200/60 uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> Super Chief
+            </h2>
+            <div className="space-y-3">
+              {!userId && (
+                <p className="text-xs text-amber-400">Sign in to validate meals</p>
+              )}
+              <textarea
+                value={validationComment}
+                onChange={(e) => setValidationComment(e.target.value)}
+                placeholder="Add a review comment (optional)"
+                rows={3}
+                className="w-full rounded-lg bg-surface-900/50 border border-surface-800 px-3 py-2 text-xs focus:outline-none focus:border-primary-500"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleValidate('APPROVED')}
+                  disabled={validating || !userId}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:brightness-110 disabled:opacity-50 transition-all"
+                >
+                  {validating ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleValidate('REJECTED')}
+                  disabled={validating || !userId}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:brightness-110 disabled:opacity-50 transition-all"
+                >
+                  {validating ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div className="glass-dark rounded-2xl p-5">
             <h2 className="mb-3 text-sm font-semibold text-surface-200/60 uppercase tracking-wider">Quick Info</h2>

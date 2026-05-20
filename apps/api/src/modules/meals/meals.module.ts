@@ -9,10 +9,12 @@ import { MealsController } from './meals.controller';
 import { MealsService } from './meals.service';
 import { OpenAiRecipeParserService } from './openai-recipe-parser.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
+import { IngredientsModule } from '../ingredients/ingredients.module';
 
 @Module({
   imports: [
     MulterModule.register({ storage: memoryStorage() }),
+    IngredientsModule,
   ],
   controllers: [MealsController],
   providers: [MealsService, OpenAiRecipeParserService, AuthGuard],

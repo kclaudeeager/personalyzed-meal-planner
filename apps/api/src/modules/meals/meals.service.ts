@@ -4,12 +4,16 @@
 
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { IngredientsService } from '../ingredients/ingredients.service';
 import { paginate } from '@meal-platform/shared';
-import { CreateMealDto, MealQueryDto, UpdateMealDto, AddVideoDto } from './meals.dto';
+import { CreateMealDto, MealQueryDto, UpdateMealDto, AddVideoDto, ValidateMealDto } from './meals.dto';
 
 @Injectable()
 export class MealsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ingredientsService: IngredientsService,
+  ) {}
 
   async findAll(query: MealQueryDto) {
     const page = query.page ?? 1;
@@ -31,6 +35,9 @@ export class MealsService {
         { title: { contains: query.search, mode: 'insensitive' } },
         { description: { contains: query.search, mode: 'insensitive' } },
       ];
+    }
+    if (!query.includePending) {
+      where.validationStatus = 'APPROVED';
     }
 
     const [meals, total] = await Promise.all([
@@ -62,7 +69,9 @@ export class MealsService {
           include: { ingredient: true },
         },
         nutritionProfile: true,
+        steps: { orderBy: { stepNumber: 'asc' } },
         videos: { orderBy: { id: 'asc' } },
+        createdBy: { select: { id: true, fullName: true, email: true } },
         _count: { select: { feedback: true, recommendations: true } },
       },
     });
@@ -70,20 +79,52 @@ export class MealsService {
     return meal;
   }
 
-  async create(dto: CreateMealDto) {
-    return this.prisma.meal.create({
+  async create(dto: CreateMealDto, createdById?: string) {
+    const { ingredients, steps, ...mealData } = dto;
+
+    const meal = await this.prisma.meal.create({
       data: {
-        title: dto.title,
-        description: dto.description,
-        preparationTime: dto.preparationTime,
-        estimatedCost: dto.estimatedCost,
-        calories: dto.calories,
-        cuisineType: dto.cuisineType ?? 'RWANDAN',
-        complexity: dto.complexity ?? 'MEDIUM',
-        tags: dto.tags ?? [],
-        imageUrl: dto.imageUrl,
+        title: mealData.title,
+        description: mealData.description,
+        preparationTime: mealData.preparationTime,
+        estimatedCost: mealData.estimatedCost,
+        calories: mealData.calories,
+        cuisineType: mealData.cuisineType ?? 'RWANDAN',
+        complexity: mealData.complexity ?? 'MEDIUM',
+        tags: mealData.tags ?? [],
+        mealTypes: mealData.mealTypes ?? [],
+        accompaniments: mealData.accompaniments,
+        notes: mealData.notes,
+        imageUrl: mealData.imageUrl,
+        createdById: createdById,
       },
     });
+
+    if (ingredients && ingredients.length > 0) {
+      for (const ing of ingredients) {
+        const ingredient = await this.ingredientsService.findOrCreate(ing.name);
+        await this.prisma.mealIngredient.create({
+          data: {
+            mealId: meal.id,
+            ingredientId: ingredient.id,
+            quantity: ing.quantity,
+            unit: ing.unit,
+          },
+        });
+      }
+    }
+
+    if (steps && steps.length > 0) {
+      await this.prisma.recipeStep.createMany({
+        data: steps.map((s, i) => ({
+          mealId: meal.id,
+          stepNumber: i + 1,
+          instruction: s.instruction,
+        })),
+      });
+    }
+
+    return this.findById(meal.id);
   }
 
   async update(id: string, dto: UpdateMealDto) {
@@ -101,11 +142,15 @@ export class MealsService {
         ...(dto.cuisineType !== undefined && { cuisineType: dto.cuisineType }),
         ...(dto.complexity !== undefined && { complexity: dto.complexity }),
         ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.mealTypes !== undefined && { mealTypes: dto.mealTypes }),
+        ...(dto.accompaniments !== undefined && { accompaniments: dto.accompaniments }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
         ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       },
       include: {
         ingredients: { include: { ingredient: true } },
         nutritionProfile: true,
+        steps: { orderBy: { stepNumber: 'asc' } },
         videos: true,
       },
     });
@@ -245,6 +290,19 @@ export class MealsService {
     });
     if (!plan) throw new NotFoundException('Meal plan not found');
 
+    // Helper: convert quantity to the unit that averageCost is based on
+    // averageCost is per kg for weight, per L for volume, per piece for countable
+    function toCostUnit(qty: number, unit: string): number {
+      const u = unit.toLowerCase();
+      if (['g', 'grams'].includes(u)) return qty / 1000;
+      if (['ml'].includes(u)) return qty / 1000;
+      if (['kg', 'l', 'liters', 'liter'].includes(u)) return qty;
+      if (['cups', 'cup'].includes(u)) return qty * 0.24; // ~0.24 L per cup
+      if (['tbsp', 'tablespoon', 'tablespoons'].includes(u)) return qty * 0.015; // ~15 ml
+      if (['tsp', 'teaspoon', 'teaspoons'].includes(u)) return qty * 0.005; // ~5 ml
+      return qty; // pieces, units, to taste — leave as-is
+    }
+
     const ingredientMap = new Map<string, {
       name: string;
       quantity: number;
@@ -259,13 +317,15 @@ export class MealsService {
         const key = `${mi.ingredient.name}-${mi.unit}`;
         const scaledQty = mi.quantity * householdSize;
         if (ingredientMap.has(key)) {
-          ingredientMap.get(key)!.quantity += scaledQty;
+          const existing = ingredientMap.get(key)!;
+          existing.quantity += scaledQty;
+          existing.cost += mi.ingredient.averageCost * toCostUnit(scaledQty, mi.unit);
         } else {
           ingredientMap.set(key, {
             name: mi.ingredient.name,
             quantity: scaledQty,
             unit: mi.unit,
-            cost: mi.ingredient.averageCost * scaledQty,
+            cost: mi.ingredient.averageCost * toCostUnit(scaledQty, mi.unit),
             ingredientId: mi.ingredient.id,
           });
         }
@@ -298,6 +358,28 @@ export class MealsService {
     });
 
     return shoppingList;
+  }
+
+  async validate(id: string, dto: ValidateMealDto, validatedById: string) {
+    const meal = await this.prisma.meal.findUnique({ where: { id } });
+    if (!meal) throw new NotFoundException('Meal not found');
+
+    return this.prisma.meal.update({
+      where: { id },
+      data: {
+        validationStatus: dto.status,
+        validatedById,
+        validationComment: dto.comment,
+      },
+      include: {
+        ingredients: { include: { ingredient: true } },
+        nutritionProfile: true,
+        steps: { orderBy: { stepNumber: 'asc' } },
+        videos: true,
+        createdBy: { select: { id: true, fullName: true, email: true } },
+        validatedBy: { select: { id: true, fullName: true, email: true } },
+      },
+    });
   }
 
   async importFromUrl(url: string) {

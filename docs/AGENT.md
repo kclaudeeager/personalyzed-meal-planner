@@ -130,17 +130,24 @@ Key Fields:
 
 Responsibilities:
 - Meal metadata
-- Ingredients
+- Ingredients (with auto-registration: create new ingredient if not found in DB)
 - Nutrition profiles
-- Cooking instructions
+- Step-by-step cooking instructions (numbered arrow format)
 - Video references
 - URL recipe import (schema.org/JSON-LD parsing)
 - OpenAI image/video recipe parsing
+- Meal type tagging (Breakfast/Lunch/Dinner multi-select)
+- Accompaniments tracking
+- Creator notes
 
 Key Fields:
 - meal_name, ingredients, preparation_time
 - estimated_cost, calories, tags
 - cuisine_type, complexity
+- meal_types (array: BREAKFAST, LUNCH, DINNER)
+- steps (ordered list of instructions)
+- accompaniments, notes
+- created_by (user reference)
 
 ---
 
@@ -221,7 +228,14 @@ meals
 - id, title, description, preparation_time
 - estimated_cost, calories, cuisine_type
 - complexity, tags[], image_url
+- meal_types[] (BREAKFAST/LUNCH/DINNER multi-select)
+- accompaniments, notes
+- created_by_id (references users)
 - created_at, updated_at
+
+recipe_steps
+- id, meal_id, step_number, instruction
+- ordered sequence for step-by-step cooking instructions
 ```
 
 ## Meal Plans
@@ -284,10 +298,13 @@ POST   /api/meals/shopping-list Generate shopping list
 GET    /api/recommendations/daily/:userId  Daily recs
 POST   /api/feedback            Submit feedback
 
+GET    /api/ingredients/search?q=term     Search ingredients (autocomplete)
+
 POST   /api/meal-plans          Create meal plan
 GET    /api/meal-plans/user/:userId    User's plans
 POST   /api/meal-plans/entry    Set entry
 POST   /api/meal-plans/generate/:userId AI generate plan
+GET    /api/meal-plans/suggestions/:userId  Smart meal suggestions
 
 GET    /api/shopping-lists/user/:userId  User's lists
 PATCH  /api/shopping-lists/item/:itemId  Toggle item
@@ -326,11 +343,14 @@ GET    /api/shopping-lists/:id/export    Export as text
 | 1 | Foundation: monorepo, auth, DB schema, API scaffolding, mobile shell | ✅ |
 | 2 | Meal System: CRUD, ingredients, videos, URL import | ✅ |
 | 3 | Recommendation Engine: rule-based scoring, daily recs | ✅ |
-| 4 | **Meal Planner + Shopping List**: weekly plans, consolidated lists | ✅ New |
+| 4 | **Meal Planner + Shopping List**: weekly plans, consolidated lists | ✅ |
 | 5 | **AI Features**: OpenAI image/video parsing, translation | ✅ Service Ready |
-| 6 | Feedback Loop: behavioral learning, personalization | 🔲 |
-| 7 | Advanced AI: collaborative filtering, vector embeddings | 🔲 |
-| 8 | Conversational AI Assistant | 🔲 |
+| 6 | **Enhanced Meal Creation**: meal types multi-select, ingredient auto-register, step-by-step instructions (arrow format), accompaniments, creator notes | 🔲 |
+| 7 | **Virtual Calendar & Smart Suggestions**: suggestion engine for weekly planning, ingredient overlap analysis, nutritional variety | 🔲 |
+| 8 | **Meal Creator Account**: seed creator user, enable new creation flow | 🔲 |
+| 9 | Feedback Loop: behavioral learning, personalization | 🔲 |
+| 10 | Advanced AI: collaborative filtering, vector embeddings | 🔲 |
+| 11 | Conversational AI Assistant | 🔲 |
 
 ---
 

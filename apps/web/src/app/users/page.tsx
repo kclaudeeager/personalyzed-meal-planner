@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Users as UsersIcon, Plus, X, Loader2 } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface User {
   id: string;
@@ -28,7 +29,7 @@ export default function UsersPage(): React.JSX.Element {
   async function fetchUsers() {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/api/users');
+      const res = await fetch(`${API_BASE}/users`);
       const json = await res.json();
       setUsers(json.data ?? []);
     } catch {
@@ -42,7 +43,7 @@ export default function UsersPage(): React.JSX.Element {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch('http://localhost:4000/api/users', {
+      const res = await fetch(`${API_BASE}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

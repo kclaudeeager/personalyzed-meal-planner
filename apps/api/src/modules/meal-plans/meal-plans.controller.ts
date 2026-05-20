@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { MealPlansService } from './meal-plans.service';
-import { CreateMealPlanDto, SetMealPlanEntryDto } from './meal-plans.dto';
+import { MealPlansService, MealSuggestion } from './meal-plans.service';
+import { CreateMealPlanDto, SetMealPlanEntryDto, SuggestMealsDto } from './meal-plans.dto';
 
 @ApiTags('meal-plans')
 @ApiBearerAuth()
@@ -54,9 +54,23 @@ export class MealPlansController {
   @ApiOperation({ summary: 'Generate meal plan from latest recommendations' })
   async generateFromRecommendations(
     @Param('userId') userId: string,
-    @Body('weekStart') weekStart: string,
+    @Body() body: { weekStart?: string },
   ) {
-    const plan = await this.mealPlansService.generateFromRecommendations(userId, weekStart);
+    if (!body.weekStart) {
+      return { success: false, message: 'weekStart is required' };
+    }
+    const plan = await this.mealPlansService.generateFromRecommendations(userId, body.weekStart);
     return { success: true, data: plan };
+  }
+
+  @Get('suggestions/:userId')
+  @ApiOperation({ summary: 'Get smart meal suggestions for unfilled slots in the week' })
+  @ApiQuery({ name: 'weekStart', required: true })
+  async suggestMeals(
+    @Param('userId') userId: string,
+    @Query('weekStart') weekStart: string,
+  ): Promise<{ success: boolean; data: MealSuggestion[] }> {
+    const suggestions = await this.mealPlansService.suggestMeals(userId, weekStart);
+    return { success: true, data: suggestions };
   }
 }

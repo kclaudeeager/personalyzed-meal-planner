@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
+import { useUserId } from '@/hooks/use-user';
+import { API_BASE } from '@/lib/api';
 
 interface Recommendation {
   score: number;
@@ -18,22 +20,27 @@ interface Recommendation {
 }
 
 export default function RecommendationsPage(): React.JSX.Element {
+  const { userId, isSignedIn } = useUserId();
   const [recommendations, setRecommendations] = useState<{
     breakfast: Recommendation[];
     lunch: Recommendation[];
     dinner: Recommendation[];
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState('');
+
+  useEffect(() => {
+    if (userId) {
+      fetchRecommendations(userId);
+    }
+  }, [userId]);
 
   async function fetchRecommendations(uid: string) {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/recommendations/daily/${uid}`);
+      const res = await fetch(`${API_BASE}/recommendations/daily/${uid}`);
       const json = await res.json();
       setRecommendations(json.data);
     } catch {
-      // error
     } finally {
       setLoading(false);
     }
@@ -48,26 +55,19 @@ export default function RecommendationsPage(): React.JSX.Element {
         <p className="mt-1 text-surface-200/60">AI-powered meal recommendations</p>
       </div>
 
-      {/* User selector */}
-      <div className="glass-dark rounded-2xl p-4 flex items-center gap-3">
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Enter user ID to generate recommendations"
-          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-        />
-        <button
-          onClick={() => userId && fetchRecommendations(userId)}
-          disabled={!userId || loading}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          Generate
-        </button>
-      </div>
+      {!isSignedIn && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-400">
+          Sign in to see personalized recommendations.
+        </div>
+      )}
 
-      {recommendations && (
+      {loading && (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+        </div>
+      )}
+
+      {recommendations && !loading && (
         <div className="space-y-6">
           {(['breakfast', 'lunch', 'dinner'] as const).map((mealType) => (
             <div key={mealType}>
@@ -97,12 +97,12 @@ export default function RecommendationsPage(): React.JSX.Element {
         </div>
       )}
 
-      {!recommendations && !loading && (
+      {!recommendations && !loading && isSignedIn && (
         <div className="glass-dark flex h-96 items-center justify-center rounded-2xl">
           <div className="text-center">
             <Sparkles className="mx-auto h-12 w-12 text-surface-200/20" />
-            <p className="mt-4 text-lg font-medium text-surface-200/40">No recommendations generated</p>
-            <p className="mt-1 text-sm text-surface-200/25">Enter a user ID above to generate personalized recommendations</p>
+            <p className="mt-4 text-lg font-medium text-surface-200/40">No recommendations yet</p>
+            <p className="mt-1 text-sm text-surface-200/25">Generate daily recommendations from the API first</p>
           </div>
         </div>
       )}

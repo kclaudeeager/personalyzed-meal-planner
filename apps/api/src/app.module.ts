@@ -13,6 +13,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { HealthModule } from './modules/health/health.module';
 import { MealPlansModule } from './modules/meal-plans/meal-plans.module';
 import { ShoppingListsModule } from './modules/shopping-lists/shopping-lists.module';
+import { IngredientsModule } from './modules/ingredients/ingredients.module';
 import { ClerkController } from './modules/clerk/clerk.controller';
 
 @Module({
@@ -29,6 +30,7 @@ import { ClerkController } from './modules/clerk/clerk.controller';
     HealthModule,
     MealPlansModule,
     ShoppingListsModule,
+    IngredientsModule,
   ],
   controllers: [ClerkController],
 })

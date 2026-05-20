@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { MessageSquare, Loader2, Star } from 'lucide-react';
+import { useUserId } from '@/hooks/use-user';
+import { API_BASE } from '@/lib/api';
 
 interface Feedback {
   id: string;
@@ -15,19 +17,23 @@ interface Feedback {
 }
 
 export default function FeedbackPage(): React.JSX.Element {
+  const { userId, isSignedIn } = useUserId();
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState('');
 
   useEffect(() => {
-    fetchFeedbacks();
-  }, []);
+    if (userId) {
+      fetchFeedbacks(userId);
+    } else {
+      fetchFeedbacks();
+    }
+  }, [userId]);
 
   async function fetchFeedbacks(uid?: string) {
     setLoading(true);
     try {
       const path = uid ? `/api/feedback/user/${uid}` : '/api/feedback';
-      const res = await fetch(`http://localhost:4000${path}`);
+      const res = await fetch(`${API_BASE}${path}`);
       const json = await res.json();
       setFeedbacks(json.data ?? []);
     } catch {
@@ -46,24 +52,17 @@ export default function FeedbackPage(): React.JSX.Element {
         <p className="mt-1 text-surface-200/60">User meal feedback and ratings</p>
       </div>
 
-      <div className="glass-dark rounded-2xl p-4 flex items-center gap-3">
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Filter by user ID"
-          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-        />
-        <button
-          onClick={() => fetchFeedbacks(userId || undefined)}
-          disabled={loading}
-          className="rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Load'}
-        </button>
-      </div>
+      {!isSignedIn && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-400">
+          Sign in to view feedback.
+        </div>
+      )}
 
-      {feedbacks.length > 0 ? (
+      {loading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+        </div>
+      ) : feedbacks.length > 0 ? (
         <div className="space-y-3">
           {feedbacks.map((fb) => (
             <div key={fb.id} className="glass-dark rounded-2xl p-5">
@@ -87,7 +86,7 @@ export default function FeedbackPage(): React.JSX.Element {
                 </span>
               </div>
               {fb.comment && (
-                <p className="mt-3 text-sm text-surface-200/60 italic">"{fb.comment}"</p>
+                <p className="mt-3 text-sm text-surface-200/60 italic">&ldquo;{fb.comment}&rdquo;</p>
               )}
             </div>
           ))}

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import {
-  Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, UseInterceptors,
+  Controller, Get, Post, Patch, Delete, Param, Query, Body, Headers, UseGuards, UseInterceptors,
   UploadedFile, UploadedFiles, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -16,7 +16,7 @@ import {
   CreateMealDto, UpdateMealDto, MealQueryDto,
   GenerateShoppingListDto, ImportRecipeDto, AddVideoDto,
   ParseImageDto, ParseVideoDto, TranslateRecipeDto,
-  AddImageUrlsDto,
+  AddImageUrlsDto, ValidateMealDto,
 } from './meals.dto';
 import { OpenAiRecipeParserService } from './openai-recipe-parser.service';
 
@@ -43,11 +43,9 @@ export class MealsController {
   }
 
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new meal' })
-  async create(@Body() dto: CreateMealDto) {
-    const meal = await this.mealsService.create(dto);
+  async create(@Body() dto: CreateMealDto, @Headers('x-user-id') userId?: string) {
+    const meal = await this.mealsService.create(dto, userId);
     return { success: true, data: meal };
   }
 
@@ -57,6 +55,17 @@ export class MealsController {
   @ApiOperation({ summary: 'Update a meal' })
   async update(@Param('id') id: string, @Body() dto: UpdateMealDto) {
     const meal = await this.mealsService.update(id, dto);
+    return { success: true, data: meal };
+  }
+
+  @Patch(':id/validate')
+  @ApiOperation({ summary: 'Validate a meal (approve/reject with optional comment)' })
+  async validate(
+    @Param('id') id: string,
+    @Body() dto: ValidateMealDto,
+    @Headers('x-user-id') userId?: string,
+  ) {
+    const meal = await this.mealsService.validate(id, dto, userId ?? 'unknown');
     return { success: true, data: meal };
   }
 

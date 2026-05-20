@@ -10,10 +10,32 @@ import {
   IsEnum,
   IsArray,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { CuisineType, Complexity } from '@meal-platform/types';
+import { CuisineType, Complexity, MealType, ValidationStatus } from '@meal-platform/types';
+
+class IngredientInputDto {
+  @ApiProperty({ example: 'Tomato' })
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ example: 2 })
+  @IsNumber()
+  @Min(0)
+  quantity!: number;
+
+  @ApiProperty({ example: 'cups' })
+  @IsString()
+  unit!: string;
+}
+
+class RecipeStepInputDto {
+  @ApiProperty({ example: 'Chop the onions finely' })
+  @IsString()
+  instruction!: string;
+}
 
 export class CreateMealDto {
   @ApiProperty({ example: 'Isombe with Ubugali' })
@@ -49,11 +71,41 @@ export class CreateMealDto {
   @IsEnum(Complexity)
   complexity?: Complexity;
 
-  @ApiPropertyOptional({ example: ['traditional', 'vegetarian', 'lunch'] })
+  @ApiPropertyOptional({ example: ['traditional', 'vegetarian'] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ example: ['BREAKFAST', 'LUNCH'], enum: MealType, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(MealType, { each: true })
+  mealTypes?: MealType[];
+
+  @ApiPropertyOptional({ example: 'Serve with rice, plantains, or salad' })
+  @IsOptional()
+  @IsString()
+  accompaniments?: string;
+
+  @ApiPropertyOptional({ example: 'You can substitute cassava leaves with spinach' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiPropertyOptional({ type: [IngredientInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => IngredientInputDto)
+  ingredients?: IngredientInputDto[];
+
+  @ApiPropertyOptional({ type: [RecipeStepInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecipeStepInputDto)
+  steps?: RecipeStepInputDto[];
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -104,6 +156,11 @@ export class MealQueryDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Include pending/rejected meals (for validators)' })
+  @IsOptional()
+  @Type(() => Boolean)
+  includePending?: boolean;
 }
 
 export class GenerateShoppingListDto {
@@ -162,6 +219,22 @@ export class UpdateMealDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ example: ['BREAKFAST', 'LUNCH'], enum: MealType, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(MealType, { each: true })
+  mealTypes?: MealType[];
+
+  @ApiPropertyOptional({ example: 'Serve with rice, plantains, or salad' })
+  @IsOptional()
+  @IsString()
+  accompaniments?: string;
+
+  @ApiPropertyOptional({ example: 'You can substitute cassava leaves with spinach' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -227,4 +300,15 @@ export class AddImageUrlsDto {
   @IsArray()
   @IsString({ each: true })
   urls!: string[];
+}
+
+export class ValidateMealDto {
+  @ApiProperty({ enum: ValidationStatus, example: ValidationStatus.APPROVED })
+  @IsEnum(ValidationStatus)
+  status!: ValidationStatus;
+
+  @ApiPropertyOptional({ example: 'Recipe looks authentic and well-documented. Approved.' })
+  @IsOptional()
+  @IsString()
+  comment?: string;
 }

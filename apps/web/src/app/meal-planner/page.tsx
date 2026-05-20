@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Loader2, Sparkles, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Sparkles, Plus, X, Lightbulb } from 'lucide-react';
+import { useUserId } from '@/hooks/use-user';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER'] as const;
 const MEAL_LABELS: Record<string, string> = { BREAKFAST: 'Breakfast', LUNCH: 'Lunch', DINNER: 'Dinner' };
+const MEAL_COLORS: Record<string, string> = {
+  BREAKFAST: 'border-l-amber-500',
+  LUNCH: 'border-l-green-500',
+  DINNER: 'border-l-indigo-500',
+};
 import { API_BASE } from '@/lib/api';
 
 interface Meal {
@@ -16,6 +22,7 @@ interface Meal {
   estimatedCost: number;
   calories: number;
   complexity: string;
+  mealTypes?: string[];
 }
 
 interface MealPlanEntry {
@@ -34,6 +41,15 @@ interface MealPlan {
   entries: MealPlanEntry[];
 }
 
+interface Suggestion {
+  dayOfWeek: number;
+  mealType: string;
+  suggestions: Array<{
+    meal: Meal;
+    reason: string;
+  }>;
+}
+
 function getMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -48,14 +64,17 @@ function formatDate(date: Date): string {
 }
 
 export default function MealPlannerPage(): React.JSX.Element {
+  const { userId } = useUserId();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState('');
   const [allMeals, setAllMeals] = useState<Meal[]>([]);
   const [showMealPicker, setShowMealPicker] = useState<{ day: number; type: string } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -87,10 +106,28 @@ export default function MealPlannerPage(): React.JSX.Element {
     }
   }
 
+  async function fetchSuggestions() {
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(`${API_BASE}/meal-plans/suggestions/${userId}?weekStart=${weekStart.toISOString()}`);
+      const json = await res.json();
+      setSuggestions(json.data ?? []);
+      setShowSuggestions(true);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }
+
   const currentPlan = plans.find((p) => {
     const ws = new Date(p.weekStart);
     return formatDate(ws) === formatDate(weekStart);
   });
+
+  const totalSlots = 21;
+  const filledSlots = currentPlan?.entries.length ?? 0;
+  const completionPct = Math.round((filledSlots / totalSlots) * 100);
 
   function getEntry(day: number, type: string): MealPlanEntry | undefined {
     return currentPlan?.entries.find((e) => e.dayOfWeek === day && e.mealType === type);
@@ -109,7 +146,6 @@ export default function MealPlannerPage(): React.JSX.Element {
         setPlans((prev) => [...prev, json.data]);
       }
     } catch {
-      // error
     } finally {
       setCreating(false);
     }
@@ -127,7 +163,6 @@ export default function MealPlannerPage(): React.JSX.Element {
         fetchPlans();
       }
     } catch {
-      // error
     } finally {
       setGenerating(false);
     }
@@ -149,9 +184,13 @@ export default function MealPlannerPage(): React.JSX.Element {
       if (res.ok) {
         fetchPlans();
         setShowMealPicker(null);
+        setShowSuggestions(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error('Entry error:', res.status, err);
       }
-    } catch {
-      // error
+    } catch (e) {
+      console.error('Entry fetch error:', e);
     }
   }
 
@@ -160,7 +199,6 @@ export default function MealPlannerPage(): React.JSX.Element {
       await fetch(`${API_BASE}/meal-plans/entry/${entryId}`, { method: 'DELETE' });
       fetchPlans();
     } catch {
-      // error
     }
   }
 
@@ -170,6 +208,11 @@ export default function MealPlannerPage(): React.JSX.Element {
     return d;
   });
 
+  const suggestionLookup: Record<string, Suggestion> = {};
+  for (const s of suggestions) {
+    suggestionLookup[`${s.dayOfWeek}-${s.mealType}`] = s;
+  }
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
@@ -177,11 +220,19 @@ export default function MealPlannerPage(): React.JSX.Element {
           <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
             Meal Planner
           </h1>
-          <p className="mt-1 text-surface-200/60">Weekly meal planning with AI-powered suggestions</p>
+          <p className="mt-1 text-surface-200/60">Weekly meal planning with smart suggestions</p>
         </div>
         <div className="flex items-center gap-3">
           {currentPlan && (
             <>
+              <button
+                onClick={fetchSuggestions}
+                disabled={loadingSuggestions}
+                className="flex items-center gap-2 rounded-xl bg-surface-800/50 border border-surface-700 px-4 py-2.5 text-sm font-medium text-surface-200/80 transition-all hover:bg-surface-700 hover:text-surface-100 disabled:opacity-50"
+              >
+                {loadingSuggestions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lightbulb className="h-4 w-4" />}
+                Suggest
+              </button>
               <button
                 onClick={handleGeneratePlan}
                 disabled={generating}
@@ -195,15 +246,11 @@ export default function MealPlannerPage(): React.JSX.Element {
         </div>
       </div>
 
-      <div className="glass-dark rounded-2xl p-4 flex items-center gap-3">
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Enter user ID"
-          className="flex-1 rounded-xl bg-surface-900/50 border border-surface-800 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-        />
-      </div>
+      {!userId && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-400">
+          Sign in to use the meal planner.
+        </div>
+      )}
 
       {userId && (
         <>
@@ -214,6 +261,7 @@ export default function MealPlannerPage(): React.JSX.Element {
                   const d = new Date(weekStart);
                   d.setDate(d.getDate() - 7);
                   setWeekStart(d);
+                  setShowSuggestions(false);
                 }}
                 className="rounded-xl bg-surface-800/50 p-2 hover:bg-surface-800 transition-colors"
               >
@@ -227,6 +275,7 @@ export default function MealPlannerPage(): React.JSX.Element {
                   const d = new Date(weekStart);
                   d.setDate(d.getDate() + 7);
                   setWeekStart(d);
+                  setShowSuggestions(false);
                 }}
                 className="rounded-xl bg-surface-800/50 p-2 hover:bg-surface-800 transition-colors"
               >
@@ -244,6 +293,24 @@ export default function MealPlannerPage(): React.JSX.Element {
               </button>
             )}
           </div>
+
+          {/* Completion bar */}
+          {currentPlan && (
+            <div className="glass-dark rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-surface-200/60">Week Progress</span>
+                <span className="text-sm font-medium text-surface-200/80">{filledSlots}/{totalSlots} meals planned</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    completionPct === 100 ? 'bg-green-500' : 'bg-primary-500'
+                  }`}
+                  style={{ width: `${completionPct}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex h-96 items-center justify-center">
@@ -266,6 +333,8 @@ export default function MealPlannerPage(): React.JSX.Element {
                   <div key={dayIndex} className="min-h-[200px] border-r border-surface-800/30 last:border-r-0 p-2">
                     {MEAL_TYPES.map((type) => {
                       const entry = getEntry(dayIndex, type);
+                      const sug = suggestionLookup[`${dayIndex}-${type}`];
+                      const hasSuggestions = sug && sug.suggestions.length > 0;
                       return (
                         <div key={type} className="mb-2">
                           <div className="text-[10px] uppercase tracking-wider text-surface-200/40 mb-1">
@@ -273,26 +342,57 @@ export default function MealPlannerPage(): React.JSX.Element {
                           </div>
                           {entry ? (
                             <div
-                              className="group relative rounded-lg bg-primary-500/10 border border-primary-500/20 p-2 cursor-pointer hover:bg-primary-500/15 transition-colors"
-                              onClick={() => setShowMealPicker({ day: dayIndex, type })}
+                              className={`group relative rounded-lg bg-primary-500/10 border border-primary-500/20 p-2 border-l-2 ${MEAL_COLORS[type] ?? ''}`}
                             >
-                              <p className="text-xs font-medium text-primary-400 truncate">{entry.meal.title}</p>
-                              <p className="text-[10px] text-surface-200/40 mt-0.5">{entry.meal.calories} cal · {entry.meal.preparationTime}min</p>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleRemoveEntry(entry.id); }}
-                                className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px]"
+                              <a href={`/meals/${entry.meal.id}`}
+                                className="block hover:bg-primary-500/15 -mx-2 -mt-2 px-2 pt-2 pb-1 rounded-t-lg transition-colors"
                               >
-                                <X className="h-3 w-3" />
-                              </button>
+                                <p className="text-xs font-medium text-primary-400 truncate hover:text-primary-300">{entry.meal.title}</p>
+                                <p className="text-[10px] text-surface-200/40 mt-0.5">{entry.meal.calories} cal · {entry.meal.preparationTime}min</p>
+                              </a>
+                              <div className="flex items-center gap-1 mt-1 pt-1 border-t border-primary-500/10">
+                                <button
+                                  onClick={() => currentPlan && setShowMealPicker({ day: dayIndex, type })}
+                                  className="text-[8px] text-surface-200/40 hover:text-surface-200/70 transition-colors"
+                                >
+                                  Replace
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleRemoveEntry(entry.id); }}
+                                  className="ml-auto text-[8px] text-red-400/60 hover:text-red-400 transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <button
-                              onClick={() => currentPlan && setShowMealPicker({ day: dayIndex, type })}
-                              disabled={!currentPlan}
-                              className="w-full rounded-lg border border-dashed border-surface-800 p-2 text-center text-[10px] text-surface-200/30 hover:border-surface-700 hover:text-surface-200/50 transition-colors disabled:opacity-30"
-                            >
-                              + Add
-                            </button>
+                            <div className="relative">
+                              <button
+                                onClick={() => currentPlan && setShowMealPicker({ day: dayIndex, type })}
+                                disabled={!currentPlan}
+                                className={`w-full rounded-lg border border-dashed p-2 text-center text-[10px] transition-colors disabled:opacity-30 ${
+                                  hasSuggestions && showSuggestions
+                                    ? 'border-accent-500/40 bg-accent-500/5 text-accent-400/60 hover:border-accent-500/60 hover:text-accent-400'
+                                    : 'border-surface-800 text-surface-200/30 hover:border-surface-700 hover:text-surface-200/50'
+                                }`}
+                              >
+                                + Add
+                              </button>
+                              {hasSuggestions && showSuggestions && (
+                                <div className="mt-1 space-y-1">
+                                  {sug.suggestions.slice(0, 2).map((s, i) => (
+                                    <button
+                                      key={i}
+                                      onClick={() => handleSetEntry(dayIndex, type, s.meal.id)}
+                                      className="w-full text-left rounded-md bg-accent-500/10 border border-accent-500/20 p-1.5 hover:bg-accent-500/15 transition-colors"
+                                    >
+                                      <p className="text-[10px] font-medium text-accent-400 truncate">{s.meal.title}</p>
+                                      <p className="text-[8px] text-surface-200/40 truncate">{s.reason}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
